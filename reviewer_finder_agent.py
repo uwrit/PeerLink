@@ -23,35 +23,20 @@ from claude_agent_sdk import (
 OPENALEX_BASE = "https://api.openalex.org"
 OPENALEX_MAILTO = "amrithg@uw.edu"
 
-@tool(
-    "search_institution",
-    "Search for an institution by name and return its OpenAlex ID, display name, and ROR. "
-    "Use this to resolve an institution name (e.g. 'University of Washington') into an "
-    "OpenAlex institution ID that can be used in work/author filters.",
-    {"institution_name": str},
-)
-async def search_institution(args: dict[str, Any]) -> dict[str, Any]:
-    name = args["institution_name"]
-    url = (
-        f"{OPENALEX_BASE}/institutions"
-        f"?search={urllib.parse.quote(name)}"
-        f"&select=id,display_name,ror"
-        f"&per_page=5"
-        f"&mailto={OPENALEX_MAILTO}"
-    )
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return _error(f"OpenAlex returned HTTP {resp.status}")
-                data = await resp.json()
-        results = data.get("results", [])
-        if not results:
-            return _text(f"No institutions found matching '{name}'.")
-        formatted = json.dumps(results, indent=2)
-        return _text(f"Found {len(results)} institution(s):\n{formatted}")
-    except Exception as e:
-        return _error(str(e))
+INSTITUTIONS = {
+    "University of Washington": "I201448701",
+    "Washington State University": "I72951846",
+    "Gonzaga University": "I119888943",
+    "University of Wyoming": "I12834331",
+    "University of Alaska Anchorage": "I147853995",
+    "University of Alaska Fairbanks": "I141472210",
+    "University of Alaska Southeast": "I90464598",
+    "Montana State University": "I23732399",
+    "University of Montana": "I6750721",
+    "University of Idaho": "I155093810",
+    "Boise State University": "I120156002",
+    "Idaho State University": "I106969075",
+}
 
 
 @tool(
@@ -92,7 +77,7 @@ async def search_institution(args: dict[str, Any]) -> dict[str, Any]:
 )
 async def search_works(args: dict[str, Any]) -> dict[str, Any]:
     query = urllib.parse.quote(args["search_query"])
-    per_page = min(args.get("per_page", 15), 200)
+    per_page = min(args.get("per_page", 25), 200)
 
     filters = []
     if inst := args.get("institution_id"):
@@ -322,8 +307,8 @@ You will be given:
    - Key scientific terms and concepts
    - Interdisciplinary angles that might be relevant
 
-2. **Resolve the institution.** Use `search_institution` to get the OpenAlex \
-ID for the target institution.
+2. **Use the provided institution ID.** The institution OpenAlex ID is given \
+to you directly — do NOT search for it.
 
 3. **Design a diverse search strategy.** Create 3-5 different search queries \
 that cover different facets of the abstract. For example:
@@ -384,6 +369,7 @@ aspects of the grant.
 async def find_reviewers(
     abstract: str,
     institution: str = "University of Washington",
+    institution_id: str | None = None,
     year_from: int = 2020,
     num_reviewers: int = 5,
     exclude_authors: list[str] | None = None,
@@ -393,7 +379,9 @@ async def find_reviewers(
 
     Args:
         abstract: The grant/research abstract (any domain).
-        institution: Institution to find reviewers from.
+        institution: Institution display name.
+        institution_id: OpenAlex institution ID (e.g. 'I201448701').
+                        If None, looked up from INSTITUTIONS dict.
         year_from: Minimum publication year for filtering.
         num_reviewers: Number of reviewers to recommend.
         exclude_authors: Optional list of author names to exclude (COI).
@@ -401,11 +389,20 @@ async def find_reviewers(
     Returns:
         A tuple of (reviewer recommendations string, usage stats dict).
     """
+    # Resolve institution ID from the built-in lookup
+    if institution_id is None:
+        institution_id = INSTITUTIONS.get(institution)
+        if institution_id is None:
+            raise ValueError(
+                f"Unknown institution '{institution}'. "
+                f"Available: {', '.join(INSTITUTIONS.keys())}"
+            )
+
     # Build the MCP server with our OpenAlex tools
     openalex_server = create_sdk_mcp_server(
         name="openalex",
         version="1.0.0",
-        tools=[search_institution, search_works, get_author_profile, search_author_works],
+        tools=[search_works, get_author_profile, search_author_works],
     )
 
     # Configure the agent
@@ -413,7 +410,6 @@ async def find_reviewers(
         system_prompt=SYSTEM_PROMPT,
         mcp_servers={"openalex": openalex_server},
         allowed_tools=[
-            "mcp__openalex__search_institution",
             "mcp__openalex__search_works",
             "mcp__openalex__get_author_profile",
             "mcp__openalex__search_author_works",
@@ -432,6 +428,7 @@ async def find_reviewers(
 
     user_prompt = (
         f"Find {num_reviewers} peer reviewers from **{institution}** "
+        f"(OpenAlex institution ID: `{institution_id}`) "
         f"(publications from {year_from} onward) for the following grant abstract:\n\n"
         f"---\n{abstract}\n---"
         f"{exclude_section}"
@@ -471,18 +468,41 @@ def main():
     print("PeerLink — Peer Reviewer Finder Agent")
     print("=" * 60)
     print()
+
+    # Let the user pick an institution
+    institution_names = list(INSTITUTIONS.keys())
+    print("Select an institution to search for reviewers:")
+    for idx, name in enumerate(institution_names, 1):
+        print(f"  {idx}. {name}")
+    print()
+
+    while True:
+        choice = input(f"Enter a number (1-{len(institution_names)}): ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(institution_names):
+            break
+        print("Invalid choice. Please try again.")
+
+    selected_institution = institution_names[int(choice) - 1]
+    selected_id = INSTITUTIONS[selected_institution]
+    print(f"\nSelected: {selected_institution} (ID: {selected_id})")
+    print()
+
     print(f"Processing {len(abstracts)} abstract(s)")
     print()
 
     for i, (title, abstract) in enumerate(abstracts):
         print("-" * 60)
         print(f"[{i + 1}] {title}")
-        print(f"Searching for 5 reviewers...")
+        print(f"Searching for 5 reviewers at {selected_institution}...")
         print("-" * 60)
         print()
 
         result, usage = asyncio.run(
-            find_reviewers(abstract=abstract)
+            find_reviewers(
+                abstract=abstract,
+                institution=selected_institution,
+                institution_id=selected_id,
+            )
         )
 
         print(result)
