@@ -286,7 +286,7 @@ def _error(text: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """\
-You are PeerLink, an expert research reviewer matching agent for UW ITHS \
+You are an expert research reviewer matching agent for UW ITHS \
 (Institute of Translational Health Sciences). Your job is to find the best \
 peer reviewers for grant applications by analyzing research abstracts and \
 searching the OpenAlex academic database.
@@ -415,7 +415,7 @@ async def find_reviewers(
             "mcp__openalex__search_author_works",
         ],
         max_turns=20,
-        model="claude-sonnet-4-5-20250929",
+        model="claude-sonnet-4-6",
     )
 
     # Build the user prompt
