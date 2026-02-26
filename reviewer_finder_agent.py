@@ -2,7 +2,7 @@ import asyncio
 import json
 import sys
 import urllib.parse
-from typing import Any
+from typing import Any, Callable
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -16,6 +16,9 @@ from claude_agent_sdk import (
     AssistantMessage,
     ResultMessage,
     TextBlock,
+    ThinkingBlock,
+    ToolUseBlock,
+    ToolResultBlock,
     tool,
     create_sdk_mcp_server,
 )
@@ -107,25 +110,34 @@ async def search_works(args: dict[str, Any]) -> dict[str, Any]:
                     return _error(f"OpenAlex returned HTTP {resp.status}")
                 data = await resp.json()
 
+        # Pre-filter: only include authors affiliated with the target institution
+        target_inst = args.get("institution_id", "")
         works = []
         for w in data.get("results", []):
-            authors = []
+            matched_authors = []
             for a in w.get("authorships", []):
-                author_info = {
+                inst_ids = [
+                    i.get("id", "").split("/")[-1]
+                    for i in a.get("institutions", [])
+                ]
+                if target_inst and target_inst not in inst_ids:
+                    continue
+                matched_authors.append({
                     "name": a.get("author", {}).get("display_name"),
                     "id": a.get("author", {}).get("id", "").split("/")[-1],
+                    "orcid": a.get("author", {}).get("orcid"),
                     "institutions": [
                         i.get("display_name")
                         for i in a.get("institutions", [])
                     ],
-                }
-                authors.append(author_info)
-            works.append({
-                "title": w.get("title"),
-                "year": w.get("publication_year"),
-                "cited_by_count": w.get("cited_by_count"),
-                "authors": authors,
-            })
+                })
+            if matched_authors:
+                works.append({
+                    "title": w.get("title"),
+                    "year": w.get("publication_year"),
+                    "cited_by_count": w.get("cited_by_count"),
+                    "authors": matched_authors,
+                })
 
         total = data.get("meta", {}).get("count", len(works))
         return _text(
@@ -152,7 +164,7 @@ async def get_author_profile(args: dict[str, Any]) -> dict[str, Any]:
 
     url = (
         f"{author_id}"
-        f"?select=id,display_name,works_count,cited_by_count,"
+        f"?select=id,orcid,display_name,works_count,cited_by_count,"
         f"summary_stats,topics,affiliations"
         f"&mailto={OPENALEX_MAILTO}"
     )
@@ -184,6 +196,7 @@ async def get_author_profile(args: dict[str, Any]) -> dict[str, Any]:
         stats = data.get("summary_stats", {})
         profile = {
             "id": data.get("id", "").split("/")[-1],
+            "orcid": data.get("orcid"),
             "display_name": data.get("display_name"),
             "works_count": data.get("works_count"),
             "cited_by_count": data.get("cited_by_count"),
@@ -291,74 +304,69 @@ You are PeerLink, an expert research reviewer matching agent for UW ITHS \
 peer reviewers for grant applications by analyzing research abstracts and \
 searching the OpenAlex academic database.
 
+## CRITICAL: Available Tools
+You have EXACTLY three tools. Use ONLY these:
+- `search_works` — search OpenAlex for scholarly works
+- `get_author_profile` — get a researcher's full profile by OpenAlex ID
+- `search_author_works` — get works by a specific author
+
+Do NOT attempt to use any other tools. All the data you need is returned directly in tool results. \
+Work with the inline data — never try to access files on disk.
+
+## Input
 You will be given:
-- A grant/research abstract (any field or domain)
-- A target institution to find reviewers from
+- A grant/research abstract
+- A target institution (name + OpenAlex ID)
 - A publication year cutoff
 - The number of reviewers to find
-- An optional list of authors to exclude (conflict of interest)
+- An optional exclusion list (conflict of interest)
 
-## Your Process
+## Process — Be Efficient
 
-1. **Analyze the abstract thoroughly.** Identify:
-   - The core research area and discipline
-   - Specific technologies, methods, or techniques mentioned
-   - The application domain (e.g., pediatrics, environmental science, etc.)
-   - Key scientific terms and concepts
-   - Interdisciplinary angles that might be relevant
+1. **Analyze the abstract.** Identify the core research area, key methods, \
+application domain, and 2-3 distinct facets worth searching.
 
-2. **Use the provided institution ID.** The institution OpenAlex ID is given \
-to you directly — do NOT search for it.
+2. **Run 3 targeted searches** using `search_works`, all filtered by the \
+given institution ID and year range. Results already contain ONLY authors \
+from the target institution, so you do not need to filter further. Design \
+queries to cover different facets:
+   - Core method/technology
+   - Application domain / field of study
+   - A broader or interdisciplinary angle
+   Derive ALL search terms from the abstract.
 
-3. **Design a diverse search strategy.** Create 3-5 different search queries \
-that cover different facets of the abstract. For example:
-   - Core technology/method query
-   - Application domain query
-   - Specific technique + domain combination
-   - Broader field query to catch senior researchers
-   Do NOT hardcode any terms — derive ALL search terms from the abstract.
+3. **Collect candidate authors** directly from the search results. Authors \
+appearing across multiple searches or on highly-cited papers are strong \
+candidates. Pick your top 5-7 unique candidates.
 
-4. **Execute searches.** Call `search_works` for each query, filtering by \
-institution and year range. Collect candidate authors from results.
+4. **Get profiles** for your top 5-7 candidates by calling \
+`get_author_profile`. Verify institution affiliation and assess topic \
+alignment, h-index, and publication impact.
 
-5. **Identify promising candidates.** Look for authors who:
-   - Appear in multiple relevant search results
-   - Have high citation counts on relevant papers
-   - Are affiliated with the target institution
-   - Are NOT in the exclusion list
-
-6. **Evaluate top candidates.** For your most promising candidates (aim for \
-8-12), call `get_author_profile` to get their full research profile. Assess:
-   - Topic alignment with the abstract
-   - Methodological expertise overlap
-   - Publication impact (h-index, citation count)
-   - Recency of relevant work
-
-7. **Select and rank the final reviewers.** Choose the requested number of \
-reviewers. Ensure diversity of expertise across the panel — don't pick 5 \
-people who all do the exact same thing. A good review panel covers different \
-aspects of the grant.
+5. **Select and rank** the final reviewers (the requested number). Ensure \
+the panel covers different aspects of the grant — don't pick people who all \
+do the exact same thing.
 
 ## Output Format
-
-For each recommended reviewer, provide:
+For each reviewer:
 - **Name** and OpenAlex author ID
-- **Affiliation** (department if available)
+- **Affiliation**
 - **Key metrics** (h-index, total works, total citations)
-- **Top research topics** (from their profile)
-- **Relevance justification** — a specific explanation of WHY this person is \
-qualified to review THIS particular grant, referencing specific aspects of the \
-abstract that match their expertise
+- **Top research topics**
+- **Relevance justification** — WHY this person is qualified to review THIS \
+grant, referencing specific aspects of the abstract
 
-End with a brief summary table and a note about how the panel covers different \
-aspects of the grant.
+End with a brief summary table.
+OUTPUT the final reviewer recommendations in the specified format.
 
-## Important Rules
+## Rules
 - NEVER recommend authors from the exclusion list
 - Only recommend authors currently affiliated with the target institution
-- All recommended reviewers must have publications from the specified year onward
-- Base ALL search queries on the abstract content — never use hardcoded terms
-- If a search returns few results, try broader or alternative queries
+- All reviewers must have publications from the specified year onward
+- Derive ALL search queries from the abstract — never hardcode terms
+- Do NOT run more than 4 search queries total — be strategic
+- Do NOT look up more than 8 author profiles total
+- Work with the data returned inline — never use file system tools
 """
 
 
@@ -373,6 +381,7 @@ async def find_reviewers(
     year_from: int = 2020,
     num_reviewers: int = 5,
     exclude_authors: list[str] | None = None,
+    on_progress: Callable[[str], None] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """
     Find peer reviewers for a grant abstract using the Claude Agent SDK.
@@ -389,6 +398,11 @@ async def find_reviewers(
     Returns:
         A tuple of (reviewer recommendations string, usage stats dict).
     """
+    def _log(msg: str) -> None:
+        if on_progress:
+            on_progress(msg)
+        print(msg)
+
     # Resolve institution ID from the built-in lookup
     if institution_id is None:
         institution_id = INSTITUTIONS.get(institution)
@@ -414,8 +428,8 @@ async def find_reviewers(
             "mcp__openalex__get_author_profile",
             "mcp__openalex__search_author_works",
         ],
-        max_turns=20,
-        model="claude-sonnet-4-5-20250929",
+        max_turns=15,
+        model="claude-sonnet-4-6",
     )
 
     # Build the user prompt
@@ -440,14 +454,22 @@ async def find_reviewers(
 
     async with ClaudeSDKClient(options=options) as client:
         await client.query(user_prompt)
+        step = 0
         async for message in client.receive_response():
+            step += 1
             if isinstance(message, AssistantMessage):
                 for block in message.content:
-                    if isinstance(block, TextBlock):
+                    if isinstance(block, ThinkingBlock):
+                        _log(block.thinking)
+                    elif isinstance(block, ToolUseBlock):
+                        tool_name = block.name.replace("mcp__openalex__", "")
+                        _log(f"Calling {tool_name}({json.dumps(block.input)})")
+                    elif isinstance(block, ToolResultBlock):
+                        status = "ERROR" if block.is_error else "OK"
+                        _log(f"Tool result ({status}): {block.content}")
+                    elif isinstance(block, TextBlock):
                         output_parts.append(block.text)
             elif isinstance(message, ResultMessage):
-                if message.result:
-                    output_parts.append(message.result)
                 usage_stats = {
                     "total_cost_usd": message.total_cost_usd,
                     "usage": message.usage,

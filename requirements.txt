@@ -1,3 +1,4 @@
 claude-agent-sdk
 aiohttp
 python-dotenv
+streamlit
