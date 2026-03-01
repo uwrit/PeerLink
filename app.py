@@ -7,12 +7,6 @@ import traceback
 import streamlit as st
 from reviewer_finder_agent import find_reviewers, INSTITUTIONS
 
-# Windows: asyncio.create_subprocess_exec requires ProactorEventLoop.
-# Streamlit defaults to SelectorEventLoop which raises NotImplementedError
-# for subprocesses. Force ProactorEventLoop before anything else.
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
