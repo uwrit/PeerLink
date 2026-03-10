@@ -320,11 +320,19 @@ You will be given:
 - A publication year cutoff
 - The number of reviewers to find
 - An optional exclusion list (conflict of interest)
+- An optional list of **previously vetted reviewers** — pre-approved, high-quality \
+reviewers from past runs
 
 ## Process — Be Efficient
 
 1. **Analyze the abstract.** Identify the core research area, key methods, \
 application domain, and 2-3 distinct facets worth searching.
+
+1b. **Check vetted reviewers first.** If a vetted reviewer list is provided, \
+evaluate each one against the abstract before searching. Call `get_author_profile` \
+on any whose topics seem relevant. Vetted reviewers who are a very strong fit should \
+be included in your final recommendations — they are pre-approved and should be \
+prioritized over unknown candidates of similar quality. Only include vette
 
 2. **Run 3 targeted searches** using `search_works`, all filtered by the \
 given institution ID and year range. Results already contain ONLY authors \
@@ -367,6 +375,28 @@ OUTPUT the final reviewer recommendations in the specified format.
 - Do NOT run more than 4 search queries total — be strategic
 - Do NOT look up more than 8 author profiles total
 - Work with the data returned inline — never use file system tools
+- Set `"vetted": true` in the JSON block for any reviewer from the vetted pool
+
+## Structured JSON Output (Required)
+
+After your summary table, append a fenced JSON block with ALL recommended reviewers. \
+This is parsed by the database and must be valid JSON:
+
+```json
+[
+  {
+    "name": "Full Name",
+    "openalex_id": "A1234567890",
+    "affiliation": "Department, Institution",
+    "h_index": 42,
+    "total_works": 150,
+    "total_citations": 3200,
+    "top_topics": ["Topic 1", "Topic 2", "Topic 3"],
+    "relevance_justification": "Why this reviewer fits this abstract.",
+    "vetted": false
+  }
+]
+```
 """
 
 
@@ -381,6 +411,7 @@ async def find_reviewers(
     year_from: int = 2020,
     num_reviewers: int = 5,
     exclude_authors: list[str] | None = None,
+    vetted_reviewers: list[dict[str, Any]] | None = None,
     on_progress: Callable[[str], None] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """
@@ -436,9 +467,25 @@ async def find_reviewers(
     exclude_section = ""
     if exclude_authors:
         exclude_section = (
-            f"\n\n**Authors to EXCLUDE (conflict of interest):**\n"
+            "\n\n**Authors to EXCLUDE (conflict of interest):**\n"
             + "\n".join(f"- {name}" for name in exclude_authors)
         )
+
+    vetted_section = ""
+    if vetted_reviewers:
+        lines = [
+            "\n\n**Previously Vetted Reviewers (prioritize if relevant):**",
+        ]
+        for r in vetted_reviewers:
+            topics = r.get("top_topics", "")
+            if isinstance(topics, list):
+                topics = ", ".join(topics)
+            lines.append(
+                f"- **{r['name']}** (ID: {r.get('openalex_id', 'N/A')}) — "
+                f"{r.get('affiliation', 'N/A')} | H-index: {r.get('h_index', 'N/A')} | "
+                f"Topics: {topics}"
+            )
+        vetted_section = "\n".join(lines)
 
     user_prompt = (
         f"Find {num_reviewers} peer reviewers from **{institution}** "
@@ -446,6 +493,7 @@ async def find_reviewers(
         f"(publications from {year_from} onward) for the following grant abstract:\n\n"
         f"---\n{abstract}\n---"
         f"{exclude_section}"
+        f"{vetted_section}"
     )
 
     # Run the agent and collect its response
