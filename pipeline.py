@@ -1,47 +1,64 @@
 """
-PeerLink Airtable Pipeline
+PeerLink Pipeline — Gravity Forms → Airtable
 
-Reads unprocessed abstracts from Airtable → runs the reviewer-finder agent →
-writes structured reviewer records back to Airtable.
-
-Vetted reviewers (Outputs rows where "Vetted" checkbox is checked) are fetched
-once at startup and passed to the agent as pre-approved candidates for each
-abstract.
+Flow:
+  1. Poll Gravity Forms API for all entries (form 140).
+  2. Check Airtable Abstracts for already-processed GF Entry IDs.
+  3. For each new entry:
+       a. Download the uploaded PDF and extract its text.
+       b. Create a record in Airtable Abstracts (logs the request).
+       c. Run the reviewer-finder agent.
+       d. Parse structured reviewer JSON from agent output.
+       e. Write reviewer records to Airtable Outputs.
+       f. Mark the Abstracts record as Processed.
+  4. Vetted reviewers (Outputs rows with "Vetted" checked) are fetched once
+     at startup and passed to the agent as pre-approved candidates.
 
 Required .env vars:
   ANTHROPIC_API_KEY      — Claude API key
   AIRTABLE_API_KEY       — Airtable personal access token
-  AIRTABLE_BASE_ID       — Airtable base ID (found in the base URL: appXXXXXXXX)
+  AIRTABLE_BASE_ID       — Airtable base ID (appXXXXXXXX)
+  GF_CONSUMER_KEY        — Gravity Forms REST API consumer key
+  GF_CONSUMER_SECRET     — Gravity Forms REST API consumer secret
 
 Optional .env vars (defaults shown):
   ABSTRACTS_TABLE        — "Abstracts"
   OUTPUTS_TABLE          — "Outputs"
+  GF_FORM_ID             — 140
+  DEFAULT_INSTITUTION    — "University of Washington"
+  DEFAULT_YEAR_FROM      — 2020
+  DEFAULT_NUM_REVIEWERS  — 5
 
-Airtable schema expected
-------------------------
-Abstracts table:
+Airtable schema — Abstracts table
+----------------------------------
+  GF Entry ID       (Single line text)  <- links back to Gravity Forms entry
   Title             (Single line text)
-  Abstract          (Long text)          ← the grant text
-  Institution       (Single line text)   ← must match INSTITUTIONS dict key
-  Year From         (Number)             ← default 2020
-  Num Reviewers     (Number)             ← default 5
-  Exclude Authors   (Long text)          ← comma-separated COI names
-  Processed         (Checkbox)           ← pipeline sets this when done
-  Processing Notes  (Long text)          ← pipeline writes status / errors here
+  Abstract          (Long text)          <- extracted from PDF
+  Institution       (Single line text)
+  Year From         (Number)
+  Num Reviewers     (Number)
+  Exclude Authors   (Long text)          <- comma-separated COI names from form
+  Applicant Name    (Single line text)
+  Applicant Email   (Single line text)
+  Award Type        (Single line text)
+  PDF URL           (URL)
+  Processed         (Checkbox)
+  Processing Notes  (Long text)
 
-Outputs table:
-  Reviewer Name         (Single line text)
-  OpenAlex ID           (Single line text)
-  Affiliation           (Single line text)
-  H-Index               (Number)
-  Total Works           (Number)
-  Total Citations       (Number)
-  Top Topics            (Long text)
+Airtable schema — Outputs table (unchanged)
+--------------------------------------------
+  Reviewer Name           (Single line text)
+  OpenAlex ID             (Single line text)
+  Affiliation             (Single line text)
+  H-Index                 (Number)
+  Total Works             (Number)
+  Total Citations         (Number)
+  Top Topics              (Long text)
   Relevance Justification (Long text)
-  Abstract Title        (Single line text)
-  Abstract Record ID    (Single line text)
-  Vetted                (Checkbox)        ← check to promote reviewer to vetted pool
-  Full Agent Output     (Long text)       ← stored on the first reviewer row only
+  Abstract Titles         (Single line text)
+  Abstract Record IDs     (Single line text)
+  Vetted                  (Checkbox)
+  Full Agent Output       (Long text)
 """
 
 import asyncio
@@ -56,6 +73,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from airtable_client import AirtableClient
+from gravity_forms_client import GravityFormsClient, extract_pdf_text, parse_entry
 from reviewer_finder_agent import find_reviewers, INSTITUTIONS
 
 # ---------------------------------------------------------------------------
@@ -64,13 +82,22 @@ from reviewer_finder_agent import find_reviewers, INSTITUTIONS
 
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY", "")
 AIRTABLE_BASE_ID = os.environ.get("AIRTABLE_BASE_ID", "")
+GF_CONSUMER_KEY = os.environ.get("GF_CONSUMER_KEY", "")
+GF_CONSUMER_SECRET = os.environ.get("GF_CONSUMER_SECRET", "")
+
 ABSTRACTS_TABLE = os.getenv("ABSTRACTS_TABLE", "Abstracts")
 OUTPUTS_TABLE = os.getenv("OUTPUTS_TABLE", "Outputs")
+GF_FORM_ID = int(os.getenv("GF_FORM_ID", "140"))
+DEFAULT_INSTITUTION = os.getenv("DEFAULT_INSTITUTION", "University of Washington")
+DEFAULT_YEAR_FROM = int(os.getenv("DEFAULT_YEAR_FROM", "2020"))
+DEFAULT_NUM_REVIEWERS = int(os.getenv("DEFAULT_NUM_REVIEWERS", "5"))
 
 _MISSING = [k for k, v in {
     "AIRTABLE_API_KEY": AIRTABLE_API_KEY,
     "AIRTABLE_BASE_ID": AIRTABLE_BASE_ID,
     "ANTHROPIC_API_KEY": os.environ.get("ANTHROPIC_API_KEY", ""),
+    "GF_CONSUMER_KEY": GF_CONSUMER_KEY,
+    "GF_CONSUMER_SECRET": GF_CONSUMER_SECRET,
 }.items() if not v]
 
 if _MISSING:
@@ -97,7 +124,7 @@ def _parse_reviewers_json(output: str) -> list[dict[str, Any]]:
 
 
 def _truncate(text: str, limit: int = 95_000) -> str:
-    """Airtable long-text fields cap at 100 000 chars; leave a small buffer."""
+    """Airtable long-text fields cap at ~100 000 chars; leave a buffer."""
     if len(text) <= limit:
         return text
     return text[:limit] + "\n\n[truncated]"
@@ -109,10 +136,7 @@ def _truncate(text: str, limit: int = 95_000) -> str:
 
 async def _get_vetted_reviewers(client: AirtableClient) -> list[dict[str, Any]]:
     """Return all Outputs rows where the Vetted checkbox is checked."""
-    records = await client.list_records(
-        OUTPUTS_TABLE,
-        filter_formula="{Vetted}=1",
-    )
+    records = await client.list_records(OUTPUTS_TABLE, filter_formula="{Vetted}=1")
     vetted = []
     for r in records:
         f = r.get("fields", {})
@@ -128,70 +152,116 @@ async def _get_vetted_reviewers(client: AirtableClient) -> list[dict[str, Any]]:
     return vetted
 
 
+async def _get_processed_gf_ids(client: AirtableClient) -> set[str]:
+    """Return the set of GF Entry IDs already present in the Abstracts table."""
+    records = await client.list_records(
+        ABSTRACTS_TABLE,
+        fields=["GF Entry ID"],
+    )
+    ids: set[str] = set()
+    for r in records:
+        gf_id = r.get("fields", {}).get("GF Entry ID", "")
+        if gf_id:
+            ids.add(str(gf_id))
+    return ids
+
+
 # ---------------------------------------------------------------------------
-# Per-abstract processing
+# Per-entry processing
 # ---------------------------------------------------------------------------
 
-async def _process_abstract(
-    client: AirtableClient,
-    record: dict[str, Any],
+async def _process_entry(
+    at_client: AirtableClient,
+    gf_client: GravityFormsClient,
+    entry: dict[str, Any],
     vetted_reviewers: list[dict[str, Any]],
 ) -> None:
-    record_id: str = record["id"]
-    fields: dict[str, Any] = record.get("fields", {})
-
-    title = fields.get("Title", "Untitled")
-    abstract = fields.get("Abstract", "").strip()
-    institution = (fields.get("Institution") or "University of Washington").strip()
-    year_from = int(fields.get("Year From") or 2020)
-    num_reviewers = int(fields.get("Num Reviewers") or 5)
-    exclude_raw = fields.get("Exclude Authors", "") or ""
-    exclude_authors = [a.strip() for a in exclude_raw.split(",") if a.strip()]
+    parsed = parse_entry(entry)
+    gf_id = parsed["gf_entry_id"]
+    title = parsed["title"] or f"GF Entry {gf_id}"
+    pdf_url = parsed["pdf_url"]
+    institution = DEFAULT_INSTITUTION
+    institution_id = INSTITUTIONS.get(institution)
 
     print(f"\n{'='*60}")
-    print(f"Abstract : {title}")
-    print(f"Institution: {institution}  |  Year from: {year_from}  |  Reviewers: {num_reviewers}")
-    print(f"Vetted pool: {len(vetted_reviewers)} reviewer(s) available")
+    print(f"GF Entry  : {gf_id}  ({parsed['date_updated']})")
+    print(f"Title     : {title}")
+    print(f"Applicant : {parsed['applicant_name']} <{parsed['applicant_email']}>")
+    print(f"Award     : {parsed['award_type']}")
+    print(f"COI       : {parsed['exclude_authors'] or 'none'}")
     print(f"{'='*60}")
 
-    # --- Validate inputs --------------------------------------------------
-    if not abstract:
-        note = "Skipped: no abstract text."
+    # --- Create Abstracts record (in-progress) ----------------------------
+    abstracts_record = await at_client.create_record(ABSTRACTS_TABLE, {
+        "GF Entry ID": gf_id,
+        "Title": title,
+        "Institution": institution,
+        "Year From": DEFAULT_YEAR_FROM,
+        "Num Reviewers": DEFAULT_NUM_REVIEWERS,
+        "Exclude Authors": ", ".join(parsed["exclude_authors"]),
+        "Applicant Name": parsed["applicant_name"],
+        "Applicant Email": parsed["applicant_email"],
+        "Award Type": parsed["award_type"],
+        "PDF URL": pdf_url,
+        "Processed": False,
+        "Processing Notes": "In progress...",
+    })
+    abstracts_record_id: str = abstracts_record["id"]
+
+    # --- Download & extract PDF -------------------------------------------
+    if not pdf_url:
+        note = "Skipped: no PDF URL in form entry."
         print(f"  {note}")
-        await client.update_record(ABSTRACTS_TABLE, record_id, {
+        await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
             "Processed": True,
             "Processing Notes": note,
         })
         return
 
-    institution_id = INSTITUTIONS.get(institution)
-    if institution_id is None:
-        note = (
-            f"Error: unknown institution '{institution}'. "
-            f"Valid options: {', '.join(INSTITUTIONS.keys())}"
-        )
+    print(f"  Downloading PDF...")
+    try:
+        pdf_bytes = await gf_client.download_pdf(pdf_url)
+        abstract_text = extract_pdf_text(pdf_bytes)
+        print(f"  Extracted {len(abstract_text):,} chars from PDF.")
+    except Exception as exc:
+        note = f"PDF error: {exc}"
         print(f"  {note}")
-        await client.update_record(ABSTRACTS_TABLE, record_id, {
+        await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
             "Processed": True,
             "Processing Notes": note,
         })
         return
+
+    if not abstract_text:
+        note = "PDF downloaded but no text could be extracted (may be scanned/image-based)."
+        print(f"  {note}")
+        await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
+            "Processed": True,
+            "Processing Notes": note,
+        })
+        return
+
+    # Store extracted abstract in Airtable for reference
+    await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
+        "Abstract": _truncate(abstract_text, 95_000),
+    })
 
     # --- Run the agent ----------------------------------------------------
+    print(f"  Running reviewer-finder agent...")
     try:
         output, usage = await find_reviewers(
-            abstract=abstract,
+            abstract=abstract_text,
             institution=institution,
             institution_id=institution_id,
-            year_from=year_from,
-            num_reviewers=num_reviewers,
-            exclude_authors=exclude_authors or None,
+            year_from=DEFAULT_YEAR_FROM,
+            num_reviewers=DEFAULT_NUM_REVIEWERS,
+            exclude_authors=parsed["exclude_authors"] or None,
             vetted_reviewers=vetted_reviewers or None,
         )
     except Exception as exc:
         note = f"Agent error: {exc}"
         print(f"  {note}")
-        await client.update_record(ABSTRACTS_TABLE, record_id, {
+        await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
             "Processed": True,
             "Processing Notes": note,
         })
@@ -200,18 +270,17 @@ async def _process_abstract(
     # --- Parse structured reviewer data -----------------------------------
     reviewers = _parse_reviewers_json(output)
     print(f"  Agent done. Parsed {len(reviewers)} structured reviewer(s).")
-
     if not reviewers:
         print("  WARNING: No JSON block found in output — storing raw output only.")
 
     # --- Write reviewer rows to Outputs table -----------------------------
+    write_ok = True
     try:
         rows_to_create = []
         for i, r in enumerate(reviewers):
             topics = r.get("top_topics", [])
             topics_str = ", ".join(topics) if isinstance(topics, list) else str(topics)
-
-            row: dict[str, Any] = {
+            rows_to_create.append({
                 "Reviewer Name": r.get("name", ""),
                 "OpenAlex ID": r.get("openalex_id", ""),
                 "Affiliation": r.get("affiliation", ""),
@@ -221,26 +290,22 @@ async def _process_abstract(
                 "Top Topics": topics_str,
                 "Relevance Justification": r.get("relevance_justification", ""),
                 "Abstract Titles": title,
-                "Abstract Record IDs": record_id,
-                # Full agent output goes on the first reviewer row only
+                "Abstract Record IDs": abstracts_record_id,
                 "Full Agent Output": _truncate(output) if i == 0 else None,
-            }
-            rows_to_create.append(row)
+            })
 
         if rows_to_create:
-            created = await client.create_records_batch(OUTPUTS_TABLE, rows_to_create)
+            created = await at_client.create_records_batch(OUTPUTS_TABLE, rows_to_create)
             print(f"  Created {len(created)} output record(s) in '{OUTPUTS_TABLE}'.")
         elif not reviewers:
-            # Fallback: create a single row with just the raw output
-            await client.create_record(OUTPUTS_TABLE, {
+            # Fallback: store raw output
+            await at_client.create_record(OUTPUTS_TABLE, {
                 "Abstract Titles": title,
-                "Abstract Record IDs": record_id,
+                "Abstract Record IDs": abstracts_record_id,
                 "Full Agent Output": _truncate(output),
                 "Relevance Justification": "See Full Agent Output — structured parsing failed.",
             })
             print("  Created 1 fallback output record (raw output only).")
-
-        write_ok = True
     except Exception as exc:
         print(f"  ERROR writing to Outputs table: {exc}")
         write_ok = False
@@ -248,22 +313,17 @@ async def _process_abstract(
     # --- Mark abstract as processed ---------------------------------------
     cost = usage.get("total_cost_usd")
     cost_str = f"${cost:.4f}" if cost is not None else "N/A"
-    if write_ok:
-        note = (
-            f"OK — {len(reviewers)} reviewer(s) found. "
-            f"Cost: {cost_str} | Turns: {usage.get('num_turns', '?')} | "
-            f"Duration: {usage.get('duration_ms', 0)/1000:.1f}s"
-        )
-    else:
-        note = (
-            f"Agent OK but Outputs write failed — check field names. "
-            f"Cost: {cost_str} | Turns: {usage.get('num_turns', '?')}"
-        )
-    await client.update_record(ABSTRACTS_TABLE, record_id, {
+    note = (
+        f"{'OK' if write_ok else 'Agent OK but Outputs write failed'} — "
+        f"{len(reviewers)} reviewer(s) found. "
+        f"Cost: {cost_str} | Turns: {usage.get('num_turns', '?')} | "
+        f"Duration: {usage.get('duration_ms', 0)/1000:.1f}s"
+    )
+    await at_client.update_record(ABSTRACTS_TABLE, abstracts_record_id, {
         "Processed": True,
         "Processing Notes": note,
     })
-    print(f"  Marked abstract as processed. {note}")
+    print(f"  Marked as processed. {note}")
 
 
 # ---------------------------------------------------------------------------
@@ -271,32 +331,39 @@ async def _process_abstract(
 # ---------------------------------------------------------------------------
 
 async def run_pipeline() -> None:
-    client = AirtableClient(AIRTABLE_API_KEY, AIRTABLE_BASE_ID)
+    at_client = AirtableClient(AIRTABLE_API_KEY, AIRTABLE_BASE_ID)
+    gf_client = GravityFormsClient(GF_CONSUMER_KEY, GF_CONSUMER_SECRET)
 
-    # 1. Fetch vetted reviewers once (shared across all abstracts this run)
+    # 1. Fetch vetted reviewers (shared across all entries this run)
     print("Fetching vetted reviewers from Airtable...")
-    vetted = await _get_vetted_reviewers(client)
+    vetted = await _get_vetted_reviewers(at_client)
     print(f"  Found {len(vetted)} vetted reviewer(s).")
 
-    # 2. Fetch unprocessed abstracts
-    print(f"\nFetching unprocessed abstracts from '{ABSTRACTS_TABLE}'...")
-    pending = await client.list_records(
-        ABSTRACTS_TABLE,
-        filter_formula="NOT({Processed})",
-    )
-    print(f"  Found {len(pending)} pending abstract(s).")
+    # 2. Find which GF entries are already processed
+    print(f"\nFetching processed GF entry IDs from '{ABSTRACTS_TABLE}'...")
+    processed_ids = await _get_processed_gf_ids(at_client)
+    print(f"  {len(processed_ids)} entries already processed.")
 
-    if not pending:
-        print("\nNothing to process. Done.")
+    # 3. Pull all GF entries
+    print(f"\nFetching entries from Gravity Forms (form {GF_FORM_ID})...")
+    all_entries = await gf_client.get_all_entries(form_id=GF_FORM_ID)
+    print(f"  Total GF entries: {len(all_entries)}")
+
+    # 4. Filter to new entries
+    new_entries = [e for e in all_entries if str(e.get("id", "")) not in processed_ids]
+    print(f"  New entries to process: {len(new_entries)}")
+
+    if not new_entries:
+        print("\nNothing new to process. Done.")
         return
 
-    # 3. Process each abstract sequentially
-    for i, record in enumerate(pending, 1):
-        print(f"\n[{i}/{len(pending)}] Processing abstract...")
-        await _process_abstract(client, record, vetted)
+    # 5. Process each entry sequentially
+    for i, entry in enumerate(new_entries, 1):
+        print(f"\n[{i}/{len(new_entries)}] Processing GF entry {entry.get('id')}...")
+        await _process_entry(at_client, gf_client, entry, vetted)
 
     print(f"\n{'='*60}")
-    print(f"Pipeline complete. Processed {len(pending)} abstract(s).")
+    print(f"Pipeline complete. Processed {len(new_entries)} new entry/entries.")
     print(f"{'='*60}")
 
 
