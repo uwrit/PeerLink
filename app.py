@@ -7,9 +7,7 @@ import traceback
 import streamlit as st
 from reviewer_finder_agent import find_reviewers, INSTITUTIONS
 
-# Windows: asyncio.create_subprocess_exec requires ProactorEventLoop.
-# Streamlit defaults to SelectorEventLoop which raises NotImplementedError
-# for subprocesses. Force ProactorEventLoop before anything else.
+#For WINDOWS computers only. Remove if not using Windows. 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
@@ -36,12 +34,12 @@ button[kind="primaryFormSubmit"]:hover {
 # --- Input form ---
 with st.form("reviewer_form"):
     abstract = st.text_area(
-        "Grant / Research Abstract",
+        "Abstract",
         height=250,
         placeholder="Paste the grant abstract here...",
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         institution = st.selectbox("Institution", list(INSTITUTIONS.keys()))
     with col2:
@@ -49,6 +47,10 @@ with st.form("reviewer_form"):
             "Publications from year", min_value=2000, max_value=2026, value=2020
         )
     with col3:
+        year_to = st.number_input(
+            "Publications to year (optional)", min_value=2000, max_value=2026, value=None
+        )
+    with col4:
         num_reviewers = st.number_input(
             "Number of reviewers", min_value=1, max_value=15, value=5
         )
@@ -61,11 +63,16 @@ if submitted:
         st.error("Please paste an abstract before submitting.")
         st.stop()
 
+    if year_to is not None and int(year_to) < int(year_from):
+        st.error("'Publications to year' cannot be earlier than 'Publications from year'.")
+        st.stop()
+
     status_container = st.status("Searching for reviewers...", expanded=True)
 
     with status_container:
         st.write(f"**Institution:** {institution}")
-        st.write(f"**Year cutoff:** {year_from} | **Reviewers requested:** {num_reviewers}")
+        year_range_str = f"{year_from} - {int(year_to)}" if year_to is not None else f"{year_from} onward"
+        st.write(f"**Year range:** {year_range_str} | **Reviewers requested:** {num_reviewers}")
 
         def _fmt_timer(seconds: float) -> str:
             mins, secs = divmod(int(seconds), 60)
@@ -88,13 +95,14 @@ if submitted:
 
         def _run_agent():
             try:
-                logger.info("Calling find_reviewers(institution=%s, year_from=%s, num_reviewers=%s)",
-                            institution, year_from, num_reviewers)
+                logger.info("Calling find_reviewers(institution=%s, year_from=%s, year_to=%s, num_reviewers=%s)",
+                            institution, year_from, year_to, num_reviewers)
                 r, u = asyncio.run(
                     find_reviewers(
                         abstract=abstract.strip(),
                         institution=institution,
                         year_from=int(year_from),
+                        year_to=int(year_to) if year_to is not None else None,
                         num_reviewers=int(num_reviewers),
                         on_progress=log,
                     )
@@ -133,7 +141,6 @@ if submitted:
 
     status_container.update(label=f"Done! ({_fmt_timer(elapsed)})", state="complete", expanded=False)
 
-    # --- Results ---
     st.divider()
     st.subheader("Recommended Reviewers")
     st.markdown(result)
