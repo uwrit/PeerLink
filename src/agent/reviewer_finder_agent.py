@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from prompt import agent_prompt
+from agent.prompt import agent_prompt
 from tools import search_works, get_author_profile, search_author_works
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")

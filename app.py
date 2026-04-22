@@ -5,7 +5,7 @@ import threading
 import time
 import traceback
 import streamlit as st
-from reviewer_finder_agent import find_reviewers, INSTITUTIONS
+from agent.reviewer_finder_agent import find_reviewers, INSTITUTIONS
 
 #For WINDOWS computers only. Remove if not using Windows. 
 if sys.platform == "win32":
