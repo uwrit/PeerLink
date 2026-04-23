@@ -151,9 +151,21 @@ export function MatchHistoryPage() {
                 const realReviewers = resultsArr
                   .filter((r) => r.orcid)
                   .map((r) => {
-                    // reviewer_name is incorrectly set to a topic string; extract real name from raw
-                    const nameMatch = r.raw?.match(/\*\*Name:\*\*\s*(.+)/)
-                    return { ...r, reviewer_name: nameMatch ? nameMatch[1].trim() : r.reviewer_name }
+                    // reviewer_name is incorrectly set to a topic string; extract real name from raw.
+                    // Find the **Name:** line that appears just before this reviewer's own ORCID.
+                    let name = r.reviewer_name
+                    if (r.raw && r.orcid) {
+                      const orcidShort = r.orcid.replace('https://orcid.org/', '')
+                      // Find the block ending at this reviewer's ORCID, then grab the last **Name:** before it
+                      const upToOrcid = r.raw.slice(0, r.raw.indexOf(orcidShort))
+                      const nameMatch = upToOrcid.match(/\*\*Name:\*\*\s*(.+)/g)
+                      if (nameMatch) {
+                        const last = nameMatch[nameMatch.length - 1]
+                        const parsed = last.match(/\*\*Name:\*\*\s*(.+)/)
+                        if (parsed) name = parsed[1].trim()
+                      }
+                    }
+                    return { ...r, reviewer_name: name }
                   })
 
                 // group by institution
