@@ -97,6 +97,11 @@ async def start_matching(
     return {"job_id": job_id, "status": "pending"}
 
 
+@router.get("/jobs")
+def list_jobs() -> list[dict[str, Any]]:
+    return job_storage.list_jobs()
+
+
 @router.get("/{job_id}")
 def get_job(job_id: int) -> dict[str, Any]:
     job = job_storage.get_job(job_id)

@@ -61,6 +61,11 @@ def update_job(job_id: int, fields: dict[str, Any]) -> None:
                 return
 
 
+def list_jobs() -> list[dict[str, Any]]:
+    with _lock:
+        return _load()
+
+
 def append_results(job_id: int, institution: str, new_results: list[dict[str, Any]]) -> None:
     with _lock:
         jobs = _load()
