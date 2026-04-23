@@ -25,38 +25,23 @@ class GravityFormsClient:
     async def get_all_entries(
         self,
         form_id: int = FORM_ID,
-        page_size: int = 3,
+        page_size: int = 4,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
-        """Fetch every entry for the form, auto-paginating."""
-        all_entries: list[dict[str, Any]] = []
-        page = 1
-
+        """Fetch the most recent entries for the form (single request, no pagination)."""
+        url = (
+            f"{GF_BASE}/forms/{form_id}/entries"
+            f"?paging[page_size]={page_size}"
+            f"&paging[current_page]=1"
+            f"&_field_ids={field_ids}"
+        )
         async with aiohttp.ClientSession() as session:
-            while True:
-                url = (
-                    f"{GF_BASE}/forms/{form_id}/entries"
-                    f"?paging[page_size]={page_size}"
-                    f"&paging[current_page]={page}"
-                    f"&_field_ids={field_ids}"
-                )
-                async with session.get(url, headers=self._auth) as resp:
-                    if not resp.ok:
-                        body = await resp.text()
-                        raise RuntimeError(
-                            f"GF API error {resp.status} (page {page}): {body[:400]}"
-                        )
-                    data = await resp.json()
-
-                entries = data.get("entries", [])
-                all_entries.extend(entries)
-
-                total = int(data.get("total_count", 0))
-                if len(all_entries) >= total or not entries:
-                    break
-                page += 1
-
-        return all_entries
+            async with session.get(url, headers=self._auth) as resp:
+                if not resp.ok:
+                    body = await resp.text()
+                    raise RuntimeError(f"GF API error {resp.status}: {body[:400]}")
+                data = await resp.json()
+        return data.get("entries", [])
 
     async def download_pdf(self, url: str) -> bytes:
         """Download a PDF and return its raw bytes."""
