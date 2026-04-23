@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router'
-import { Menu, LayoutDashboard, History, Settings, ChevronLeft, FilePlus, FileText } from 'lucide-react'
+import { Menu, LayoutDashboard, History, ChevronLeft, FilePlus, FileText } from 'lucide-react'
 
 export function Layout() {
   const [isOpen, setIsOpen] = useState(true)
@@ -31,7 +31,6 @@ export function Layout() {
               { icon: FileText, label: 'Abstracts', path: '/abstracts' },
               { icon: FilePlus, label: 'Add New Abstract', path: '/manual-entry' },
               { icon: History, label: 'Match History', path: '/match-history' },
-              { icon: Settings, label: 'Account', path: '/account' },
             ].map((item) => (
               <Link
                 key={item.path}

@@ -145,7 +145,7 @@ export function MatchHistoryPage() {
               {pastJobs.map((job) => {
                 const isExpanded = expandedJobs.includes(job.id)
                 const institutionNames = job.institutions.map((i) => i.name).join(', ')
-                const reviewerCount = Object.values(job.results ?? {}).reduce((sum, arr) => sum + arr.length, 0)
+                const reviewerCount = Object.values(job.results ?? {}).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
                 return (
                   <div key={job.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <button
@@ -184,7 +184,7 @@ export function MatchHistoryPage() {
                             <div key={institution} className="bg-white rounded-lg p-4 border border-gray-200">
                               <h5 className="font-medium text-[#203E84] mb-3">{institution}</h5>
                               <div className="flex flex-wrap gap-2">
-                                {reviewers.map((r, idx) => (
+                                {Array.isArray(reviewers) && reviewers.map((r, idx) => (
                                   <Badge key={idx} variant="outline" className="border-[#849B6F] text-[#849B6F]">
                                     {r.reviewer_name}
                                   </Badge>
