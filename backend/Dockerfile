@@ -16,7 +16,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend ./backend
 COPY src ./src
-COPY tools.py gravity_forms_client.py ./
 
 EXPOSE 8000
 
