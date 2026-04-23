@@ -1,0 +1,7 @@
+CREATE DATABASE IF NOT EXISTS peerlink
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+CREATE USER IF NOT EXISTS 'peerlink'@'%' IDENTIFIED BY 'peerlink';
+GRANT ALL PRIVILEGES ON peerlink.* TO 'peerlink'@'%';
+FLUSH PRIVILEGES;

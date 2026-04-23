@@ -25,7 +25,7 @@ class GravityFormsClient:
     async def get_all_entries(
         self,
         form_id: int = FORM_ID,
-        page_size: int = 50,
+        page_size: int = 3,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
         """Fetch every entry for the form, auto-paginating."""
@@ -73,11 +73,15 @@ class GravityFormsClient:
 # PDF text extraction (sync helper — call from sync context or thread)
 # ---------------------------------------------------------------------------
 
-def extract_pdf_text(pdf_bytes: bytes, max_pages: int = 8) -> str:
+def extract_pdf_text(pdf_bytes: bytes, abstract_only: bool = False) -> str:
     """
-    Extract plain text from the first *max_pages* pages of a PDF.
+    Extract plain text from a PDF.
+    If abstract_only=True, returns only the text between the "Abstract" heading
+    and the next top-level section heading (or end of extracted text).
     Returns an empty string if extraction fails.
     """
+    import re
+
     try:
         from pypdf import PdfReader
     except ImportError:
@@ -87,15 +91,53 @@ def extract_pdf_text(pdf_bytes: bytes, max_pages: int = 8) -> str:
 
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
-        pages = reader.pages[:max_pages]
+        pages = reader.pages
         parts = []
         for page in pages:
             text = page.extract_text()
             if text:
                 parts.append(text)
-        return "\n\n".join(parts).strip()
-    except Exception as exc:
-        return ""  # caller handles empty string as extraction failure
+        full_text = "\n\n".join(parts).strip()
+    except Exception:
+        return ""
+
+    if not abstract_only:
+        return full_text
+
+    # Matches numbered section headings like "2. Abstract" or plain "Abstract".
+    # Captures everything until the next numbered section (e.g. "3. Research Plan")
+    # or a known standalone heading, or end of text.
+    match = re.search(
+        r'(?im)^(?:\d+\.\s+)?Abstract[:\s]*$\s*(.*?)'
+        r'(?=^\d+\.\s+\w|\Z)',
+        full_text,
+        re.DOTALL,
+    )
+    if match:
+        text = match.group(1).strip()
+        return _clean_abstract(text)
+
+    # Fallback: "Abstract" inline with content on the same line.
+    match = re.search(
+        r'(?i)\bAbstract\b[:\s]+(.*?)(?=\n\d+\.\s+\w|\Z)',
+        full_text,
+        re.DOTALL,
+    )
+    if match:
+        return _clean_abstract(match.group(1).strip())
+
+    return ""
+
+
+def _clean_abstract(text: str) -> str:
+    import re
+    # Drop form-template instruction lines (e.g. "Please insert your abstract here...")
+    text = re.sub(r'(?im)^please\b[^\n]*\n?', '', text)
+    # Drop page headers that leaked in: short lines followed by a known app title line
+    text = re.sub(r'(?m)^.{1,60}\n(?:ITHS|University of Washington)[^\n]*\n?', '', text)
+    # Fix pypdf split-capital artifacts: lone uppercase letter on its own line (e.g. "A\nccurate")
+    text = re.sub(r'(?m)^([A-Z])\n([a-z])', r'\1\2', text)
+    return text.strip()
 
 
 # ---------------------------------------------------------------------------

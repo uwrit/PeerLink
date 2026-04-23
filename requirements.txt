@@ -1,5 +1,9 @@
 claude-agent-sdk
 aiohttp
 python-dotenv
-streamlit
 pypdf
+fastapi
+uvicorn[standard]
+websockets
+sqlmodel
+pymysql

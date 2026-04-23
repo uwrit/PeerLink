@@ -1,0 +1,17 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - abstract_data:/app/data
+
+networks:
+  peerlink:
+
+volumes:
+  abstract_data:
