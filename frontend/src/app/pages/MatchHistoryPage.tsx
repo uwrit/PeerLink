@@ -145,7 +145,19 @@ export function MatchHistoryPage() {
               {pastJobs.map((job) => {
                 const isExpanded = expandedJobs.includes(job.id)
                 const institutionNames = job.institutions.map((i) => i.name).join(', ')
-                const reviewerCount = Object.values(job.results ?? {}).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
+
+                // results is a flat array; filter to real reviewer entries (have orcid or h_index)
+                const resultsArr = Array.isArray(job.results) ? job.results : []
+                const realReviewers = resultsArr.filter((r) => r.orcid || r.h_index != null)
+
+                // group by institution
+                const byInstitution = realReviewers.reduce<Record<string, typeof realReviewers>>((acc, r) => {
+                  const key = r.institution ?? 'Unknown'
+                  if (!acc[key]) acc[key] = []
+                  acc[key].push(r)
+                  return acc
+                }, {})
+
                 return (
                   <div key={job.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <button
@@ -170,7 +182,7 @@ export function MatchHistoryPage() {
                           <div className="text-gray-600">Abstracts</div>
                         </div>
                         <div className="text-center">
-                          <div className="font-semibold text-[#203E84]">{reviewerCount}</div>
+                          <div className="font-semibold text-[#203E84]">{realReviewers.length}</div>
                           <div className="text-gray-600">Reviewers</div>
                         </div>
                       </div>
@@ -180,11 +192,11 @@ export function MatchHistoryPage() {
                       <div className="border-t border-gray-200 p-6 bg-[#E1EFD4]/30">
                         <h4 className="font-semibold text-[#203E84] mb-4">Reviewer Results by Institution</h4>
                         <div className="space-y-4">
-                          {Object.entries(job.results ?? {}).map(([institution, reviewers]) => (
+                          {Object.entries(byInstitution).map(([institution, reviewers]) => (
                             <div key={institution} className="bg-white rounded-lg p-4 border border-gray-200">
                               <h5 className="font-medium text-[#203E84] mb-3">{institution}</h5>
                               <div className="flex flex-wrap gap-2">
-                                {Array.isArray(reviewers) && reviewers.map((r, idx) => (
+                                {reviewers.map((r, idx) => (
                                   <Badge key={idx} variant="outline" className="border-[#849B6F] text-[#849B6F]">
                                     {r.reviewer_name}
                                   </Badge>
