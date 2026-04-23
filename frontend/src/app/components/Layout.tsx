@@ -1,96 +1,77 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router'
-import {
-  LayoutDashboard, FileText, FilePlus, History,
-  Settings, ChevronLeft, Menu,
-} from 'lucide-react'
-
-const NAV = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: FileText,        label: 'Abstracts',  path: '/abstracts' },
-  { icon: FilePlus,        label: 'Add Abstract', path: '/manual-entry' },
-  { icon: History,         label: 'Match History', path: '/match-history' },
-  { icon: Settings,        label: 'Account',    path: '/account' },
-]
+import { Menu, LayoutDashboard, History, Settings, ChevronLeft, FilePlus, FileText } from 'lucide-react'
 
 export function Layout() {
-  const [collapsed, setCollapsed] = useState(false)
-  const { pathname } = useLocation()
+  const [isOpen, setIsOpen] = useState(true)
+  const location = useLocation()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <aside className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-200 ${collapsed ? 'w-14' : 'w-56'}`}>
-        {/* Logo */}
-        <div className="flex items-center justify-between px-3 h-14 border-b border-gray-200 flex-shrink-0">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-[#4b2e83] flex items-center justify-center">
-                <span className="text-white text-xs font-bold">P</span>
-              </div>
-              <span className="text-sm font-semibold text-gray-900">PeerLink</span>
-            </div>
-          )}
+      <aside
+        className={`bg-[#E8F0DD] border-r border-[rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col ${
+          isOpen ? 'w-64' : 'w-16'
+        }`}
+      >
+        <div className="p-4 flex items-center justify-between border-b border-[rgba(0,0,0,0.1)]">
+          {isOpen && <h2 className="text-xl font-semibold text-black">PeerLink</h2>}
           <button
-            onClick={() => setCollapsed(!collapsed)}
-            className={`p-1.5 rounded hover:bg-gray-100 text-gray-400 transition-colors ${collapsed ? 'mx-auto' : ''}`}
+            onClick={() => setIsOpen(!isOpen)}
+            className={`p-2 rounded-lg hover:bg-white/50 transition-colors text-black ${!isOpen ? 'mx-auto' : ''}`}
           >
-            {collapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {isOpen ? <ChevronLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ icon: Icon, label, path }) => {
-            const active = pathname === path
-            return (
+        <nav className="flex-1 p-4">
+          <div className="space-y-2">
+            {[
+              { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+              { icon: FileText, label: 'Abstracts', path: '/abstracts' },
+              { icon: FilePlus, label: 'Add New Abstract', path: '/manual-entry' },
+              { icon: History, label: 'Match History', path: '/match-history' },
+              { icon: Settings, label: 'Account', path: '/account' },
+            ].map((item) => (
               <Link
-                key={path}
-                to={path}
-                title={collapsed ? label : undefined}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded text-sm transition-colors ${
-                  active
-                    ? 'bg-[#4b2e83] text-white font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                } ${collapsed ? 'justify-center' : ''}`}
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  location.pathname === item.path
+                    ? 'bg-[#849B6F] text-white'
+                    : 'text-black hover:bg-white/50'
+                } ${!isOpen ? 'justify-center' : ''}`}
               >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                {!collapsed && <span>{label}</span>}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {isOpen && <span className="text-sm font-medium">{item.label}</span>}
               </Link>
-            )
-          })}
-        </nav>
-
-        {/* Footer */}
-        {!collapsed && (
-          <div className="px-3 py-3 border-t border-gray-200 flex-shrink-0">
-            <p className="text-[11px] text-gray-400 leading-tight">ITHS PeerLink</p>
-            <p className="text-[11px] text-gray-300">Reviewer Matching System</p>
+            ))}
           </div>
-        )}
+        </nav>
       </aside>
 
-      {/* Main */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-5 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-[#4b2e83]">
-              Institute of Translational Health Sciences
+        <header className="bg-white border-b border-[rgba(0,0,0,0.1)] px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-2xl font-bold text-[#203E84]" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>
+              PeerLink
             </span>
+            <span className="text-sm text-gray-400 border-l border-gray-200 pl-4">ITHS</span>
           </div>
-          <div className="flex items-center gap-2.5">
+
+          <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-xs font-medium text-gray-700">Program Coordinator</p>
-              <p className="text-[11px] text-gray-400">ITHS · University of Washington</p>
+              <div className="text-sm font-medium text-[#203E84]">Program Coordinator</div>
+              <div className="text-xs text-gray-600">ITHS</div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-[#4b2e83] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#849B6F] flex items-center justify-center text-white font-medium text-sm">
               PC
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto bg-white">
           <Outlet />
         </main>
       </div>

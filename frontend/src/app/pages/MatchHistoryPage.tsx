@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Loader2, Clock, CheckCircle2 } from 'lucide-react'
+import { Badge } from '../components/ui/badge'
 import { usePeerLink } from '../context/PeerLinkContext'
 import { api, MatchJob } from '../../api/client'
 
@@ -41,170 +42,174 @@ export function MatchHistoryPage() {
   )
 
   return (
-    <div className="p-6 space-y-5 max-w-6xl mx-auto">
-
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">Match History</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Active submissions and completed matching jobs</p>
-        </div>
-        <select
-          value={selectedProgram}
-          onChange={(e) => setSelectedProgram(e.target.value)}
-          className="text-xs border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#4b2e83] min-w-[220px]"
-        >
-          {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </div>
-
-      {/* Live Activity */}
-      {filteredLiveEntries.length > 0 && (
-        <div className="bg-white rounded border border-gray-200">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-            </span>
-            <h2 className="text-sm font-semibold text-gray-900">Live Activity</h2>
-            <span className="ml-1 text-[11px] text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
-              {filteredLiveEntries.length}
-            </span>
+    <div className="p-6 min-h-full" style={{ backgroundColor: '#E8F0DD30' }}>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-[#203E84] mb-2">Match History</h1>
+            <p className="text-gray-700">Track active submissions and review past matching jobs</p>
           </div>
-
-          <div className="divide-y divide-gray-50">
-            {filteredLiveEntries.map((entry) => {
-              const isProcessing = entry.status === 'processing'
-              const isExpanded = expandedLive.includes(entry.id)
-
-              return (
-                <div key={entry.id}>
-                  <button
-                    onClick={() => toggleLive(entry.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${isProcessing ? 'bg-blue-50' : 'bg-amber-50'}`}>
-                        {isProcessing
-                          ? <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
-                          : <Clock className="w-3.5 h-3.5 text-amber-500" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${isProcessing ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
-                            {isProcessing ? 'Processing' : 'In Progress'}
-                          </span>
-                          <span className="text-[11px] text-gray-400">{formatTime(entry.submittedAt)}</span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-800 truncate">
-                          {entry.abstracts[0]?.title}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {entry.abstracts[0]?.applicantName} · {entry.abstracts[0]?.program}
-                        </p>
-                      </div>
-                    </div>
-                    {isExpanded
-                      ? <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      : <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
-                  </button>
-
-                  {isProcessing && (
-                    <div className="h-0.5 bg-blue-50 overflow-hidden mx-4">
-                      <div className="h-full bg-blue-300 animate-pulse" style={{ width: '60%' }} />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Program:</label>
+            <select
+              value={selectedProgram}
+              onChange={(e) => setSelectedProgram(e.target.value)}
+              className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] font-medium text-gray-700 min-w-[260px] shadow-sm"
+            >
+              {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
         </div>
-      )}
 
-      {/* Past Jobs */}
-      {!loadingJobs && pastJobs.length > 0 && (
-        <div className="bg-white rounded border border-gray-200">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200">
-            <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-            <h2 className="text-sm font-semibold text-gray-900">Completed Jobs</h2>
-            <span className="ml-1 text-[11px] text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
-              {pastJobs.length}
-            </span>
-          </div>
+        {/* Live Activity */}
+        {filteredLiveEntries.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
+              </span>
+              <h2 className="text-[#203E84]" style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '1.2rem', fontWeight: 700 }}>
+                Live Activity
+              </h2>
+              <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
+                {filteredLiveEntries.length} active
+              </span>
+            </div>
 
-          <div className="divide-y divide-gray-50">
-            {pastJobs.map((job) => {
-              const isExpanded = expandedJobs.includes(job.id)
-              const institutionNames = job.institutions.map((i) => i.name).join(', ')
-              const reviewerCount = Object.values(job.results ?? {}).reduce((sum, arr) => sum + arr.length, 0)
-              return (
-                <div key={job.id}>
-                  <button
-                    onClick={() => toggleJob(job.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            <div className="space-y-3">
+              {filteredLiveEntries.map((entry) => {
+                const isProcessing = entry.status === 'processing'
+                const isExpanded = expandedLive.includes(entry.id)
+
+                return (
+                  <div
+                    key={entry.id}
+                    className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden ${isProcessing ? 'border-blue-200' : 'border-amber-200'}`}
                   >
-                    <div className="flex items-center gap-3">
-                      {isExpanded
-                        ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
-                        : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />}
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-sm font-medium text-gray-800">{institutionNames || `Job #${job.id}`}</span>
-                          <span className="text-[11px] font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded">Completed</span>
+                    <button
+                      onClick={() => toggleLive(entry.id)}
+                      className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isProcessing ? 'bg-blue-100' : 'bg-amber-100'}`}>
+                          {isProcessing
+                            ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                            : <Clock className="w-5 h-5 text-amber-500" />}
                         </div>
-                        <p className="text-xs text-gray-500">{new Date(job.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 text-xs text-gray-500">
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-800 text-sm">{job.abstract_ids?.length ?? 1}</p>
-                        <p>Abstracts</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-800 text-sm">{reviewerCount}</p>
-                        <p>Reviewers</p>
-                      </div>
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
-                      <p className="text-xs font-medium text-gray-700 mb-3 uppercase tracking-wide">Reviewer Results by Institution</p>
-                      <div className="space-y-3">
-                        {Object.entries(job.results ?? {}).map(([institution, reviewers]) => (
-                          <div key={institution} className="bg-white rounded border border-gray-200 px-3 py-2.5">
-                            <p className="text-xs font-semibold text-gray-700 mb-2">{institution}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {reviewers.map((r, idx) => (
-                                <span key={idx} className="text-[11px] border border-gray-200 text-gray-600 px-2 py-0.5 rounded">
-                                  {r.reviewer_name}
-                                </span>
-                              ))}
-                            </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <Badge className={`text-xs font-medium ${isProcessing ? 'bg-blue-100 text-blue-700 hover:bg-blue-100 border border-blue-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-100 border border-amber-200'}`}>
+                              {isProcessing ? 'Processing' : 'In Progress'}
+                            </Badge>
+                            <span className="text-xs text-gray-400">{formatTime(entry.submittedAt)}</span>
                           </div>
-                        ))}
+                          <p className="text-sm font-medium text-gray-900 leading-snug truncate">
+                            {entry.abstracts[0]?.title}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {entry.abstracts[0]?.applicantName} · {entry.abstracts[0]?.program}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                      {isExpanded
+                        ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                    </button>
+
+                    {isProcessing && (
+                      <div className="h-1 bg-blue-100 overflow-hidden">
+                        <div className="h-full bg-blue-400 animate-pulse" style={{ width: '60%' }} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {loadingJobs && (
-        <div className="bg-white rounded border border-gray-200 py-10 text-center">
-          <Loader2 className="h-5 w-5 text-gray-300 animate-spin mx-auto" />
-        </div>
-      )}
+        {/* Past Jobs */}
+        {!loadingJobs && pastJobs.length > 0 && (
+          <div>
+            {filteredLiveEntries.length > 0 && (
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle2 className="w-4 h-4 text-[#849B6F]" />
+                <h2 className="text-[#203E84]" style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '1.2rem', fontWeight: 700 }}>
+                  Past Jobs
+                </h2>
+              </div>
+            )}
+            <div className="space-y-4">
+              {pastJobs.map((job) => {
+                const isExpanded = expandedJobs.includes(job.id)
+                const institutionNames = job.institutions.map((i) => i.name).join(', ')
+                const reviewerCount = Object.values(job.results ?? {}).reduce((sum, arr) => sum + arr.length, 0)
+                return (
+                  <div key={job.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <button
+                      onClick={() => toggleJob(job.id)}
+                      className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        {isExpanded
+                          ? <ChevronDown className="h-5 w-5 text-[#203E84]" />
+                          : <ChevronRight className="h-5 w-5 text-[#203E84]" />}
+                        <div className="text-left">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-semibold text-lg text-[#203E84]">{institutionNames || 'Job #' + job.id}</h3>
+                            <Badge className="bg-[#849B6F] text-white hover:bg-[#849B6F]">Completed</Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">{new Date(job.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6 text-sm">
+                        <div className="text-center">
+                          <div className="font-semibold text-[#203E84]">{job.abstract_ids?.length ?? 1}</div>
+                          <div className="text-gray-600">Abstracts</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-[#203E84]">{reviewerCount}</div>
+                          <div className="text-gray-600">Reviewers</div>
+                        </div>
+                      </div>
+                    </button>
 
-      {pastJobs.length === 0 && filteredLiveEntries.length === 0 && !loadingJobs && (
-        <div className="bg-white rounded border border-gray-200 py-16 text-center">
-          <p className="text-sm text-gray-500 mb-1">No matching activity yet</p>
-          <p className="text-xs text-gray-400">Submit abstracts for reviewer matching to see activity here</p>
-        </div>
-      )}
+                    {isExpanded && (
+                      <div className="border-t border-gray-200 p-6 bg-[#E1EFD4]/30">
+                        <h4 className="font-semibold text-[#203E84] mb-4">Reviewer Results by Institution</h4>
+                        <div className="space-y-4">
+                          {Object.entries(job.results ?? {}).map(([institution, reviewers]) => (
+                            <div key={institution} className="bg-white rounded-lg p-4 border border-gray-200">
+                              <h5 className="font-medium text-[#203E84] mb-3">{institution}</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {reviewers.map((r, idx) => (
+                                  <Badge key={idx} variant="outline" className="border-[#849B6F] text-[#849B6F]">
+                                    {r.reviewer_name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {pastJobs.length === 0 && filteredLiveEntries.length === 0 && !loadingJobs && (
+          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+            <p className="text-gray-600 mb-2">No matching activity yet</p>
+            <p className="text-sm text-gray-500">Submit abstracts for reviewer matching to see activity here</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
