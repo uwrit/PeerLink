@@ -67,7 +67,7 @@ export function DashboardPage() {
       {/* KPI row */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Total Abstracts', value: total, icon: FileText, color: 'text-[#1e3a6e]', border: 'border-[#1e3a6e]/20' },
+          { label: 'Total Abstracts', value: total, icon: FileText, color: 'text-[#4b2e83]', border: 'border-[#4b2e83]/20' },
           { label: 'Unmatched', value: unmatched, icon: AlertCircle, color: 'text-red-600', border: 'border-red-100' },
           { label: 'In Progress', value: inProgress, icon: Clock, color: 'text-amber-600', border: 'border-amber-100' },
           { label: 'Matched', value: matched, icon: CheckCircle2, color: 'text-green-700', border: 'border-green-100' },
@@ -90,7 +90,7 @@ export function DashboardPage() {
             <select
               value={activeProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              className="text-xs border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] min-w-[240px]"
+              className="text-xs border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#4b2e83] min-w-[240px]"
             >
               {displayPrograms.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -101,7 +101,7 @@ export function DashboardPage() {
           {/* Mini stats */}
           <div className="grid grid-cols-4 gap-3 mb-4">
             {[
-              { label: 'Total', value: stats.total, color: 'text-[#1e3a6e]' },
+              { label: 'Total', value: stats.total, color: 'text-[#4b2e83]' },
               { label: 'Unmatched', value: stats.unmatched, color: 'text-red-600' },
               { label: 'In Progress', value: stats.inProgress, color: 'text-amber-600' },
               { label: 'Matched', value: stats.matched, color: 'text-green-700' },
@@ -137,7 +137,7 @@ export function DashboardPage() {
         <div className="px-4 pb-4">
           <Link
             to="/abstracts"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1e3a6e] hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4b2e83] hover:underline"
           >
             View abstracts for this program <ArrowRight className="h-3 w-3" />
           </Link>
@@ -196,7 +196,7 @@ export function DashboardPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="px-4 py-2 rounded bg-[#1e3a6e] text-white text-sm font-medium hover:bg-[#152d56] disabled:opacity-50 transition-colors"
+            className="px-4 py-2 rounded bg-[#4b2e83] text-white text-sm font-medium hover:bg-[#3b2468] disabled:opacity-50 transition-colors"
           >
             {syncing ? 'Syncing…' : 'Sync from Gravity Forms'}
           </button>

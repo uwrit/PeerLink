@@ -4,8 +4,8 @@
   --font-size: 14px;
 
   /* PeerLink palette */
-  --navy: #1e3a6e;
-  --navy-dark: #152d56;
+  --navy: #4b2e83;
+  --navy-dark: #3b2468;
   --sage: #5a7a4a;
   --sage-light: #eef3e8;
   --white: #ffffff;
@@ -36,7 +36,7 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #1e3a6e;
+  --primary: #4b2e83;
   --primary-foreground: #ffffff;
   --secondary: #5a7a4a;
   --secondary-foreground: #ffffff;
@@ -52,9 +52,9 @@
   --switch-background: #cbd5e1;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #1e3a6e;
+  --ring: #4b2e83;
 
-  --chart-1: #1e3a6e;
+  --chart-1: #4b2e83;
   --chart-2: #5a7a4a;
   --chart-3: #94a3b8;
   --chart-4: #d97706;
@@ -64,12 +64,12 @@
 
   --sidebar: #ffffff;
   --sidebar-foreground: #334155;
-  --sidebar-primary: #1e3a6e;
+  --sidebar-primary: #4b2e83;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #1e3a6e;
+  --sidebar-accent-foreground: #4b2e83;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #1e3a6e;
+  --sidebar-ring: #4b2e83;
 }
 
 @theme inline {

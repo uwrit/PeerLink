@@ -25,7 +25,7 @@ export function Layout() {
         <div className="flex items-center justify-between px-3 h-14 border-b border-gray-200 flex-shrink-0">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-[#1e3a6e] flex items-center justify-center">
+              <div className="w-6 h-6 rounded bg-[#4b2e83] flex items-center justify-center">
                 <span className="text-white text-xs font-bold">P</span>
               </div>
               <span className="text-sm font-semibold text-gray-900">PeerLink</span>
@@ -50,7 +50,7 @@ export function Layout() {
                 title={collapsed ? label : undefined}
                 className={`flex items-center gap-2.5 px-2.5 py-2 rounded text-sm transition-colors ${
                   active
-                    ? 'bg-[#1e3a6e] text-white font-medium'
+                    ? 'bg-[#4b2e83] text-white font-medium'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 } ${collapsed ? 'justify-center' : ''}`}
               >
@@ -75,7 +75,7 @@ export function Layout() {
         {/* Top bar */}
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-5 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-[#1e3a6e]">
+            <span className="text-sm font-semibold text-[#4b2e83]">
               Institute for Translational Health Sciences
             </span>
           </div>
@@ -84,7 +84,7 @@ export function Layout() {
               <p className="text-xs font-medium text-gray-700">Program Coordinator</p>
               <p className="text-[11px] text-gray-400">ITHS · University of Washington</p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-[#1e3a6e] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#4b2e83] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
               PC
             </div>
           </div>

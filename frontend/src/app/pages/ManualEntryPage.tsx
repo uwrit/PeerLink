@@ -85,7 +85,7 @@ export function ManualEntryPage() {
                 value={formData.applicantName}
                 onChange={(e) => setFormData({ ...formData, applicantName: e.target.value })}
                 placeholder="e.g., Jane Smith"
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e]"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83]"
               />
             </div>
 
@@ -100,7 +100,7 @@ export function ManualEntryPage() {
                 value={formData.affiliation}
                 onChange={(e) => setFormData({ ...formData, affiliation: e.target.value })}
                 placeholder="e.g., University of Washington"
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e]"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83]"
               />
             </div>
 
@@ -115,7 +115,7 @@ export function ManualEntryPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="applicant@example.com"
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e]"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83]"
               />
             </div>
           </div>
@@ -136,7 +136,7 @@ export function ManualEntryPage() {
                 required
                 value={formData.program}
                 onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e]"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83]"
               >
                 {programs.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
@@ -153,7 +153,7 @@ export function ManualEntryPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Enter the title of the research abstract"
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e]"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83]"
               />
             </div>
 
@@ -168,7 +168,7 @@ export function ManualEntryPage() {
                 value={formData.abstractText}
                 onChange={(e) => setFormData({ ...formData, abstractText: e.target.value })}
                 placeholder="Paste or type the full abstract text here..."
-                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] focus:border-[#1e3a6e] resize-y"
+                className="w-full text-sm border border-gray-200 rounded px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-[#4b2e83] focus:border-[#4b2e83] resize-y"
               />
               <p className="text-[11px] text-gray-400 mt-1">Include the complete abstract as submitted by the applicant.</p>
             </div>
@@ -195,7 +195,7 @@ export function ManualEntryPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 text-sm font-medium rounded bg-[#1e3a6e] text-white hover:bg-[#152d56] disabled:opacity-50 transition-colors"
+              className="px-4 py-1.5 text-sm font-medium rounded bg-[#4b2e83] text-white hover:bg-[#3b2468] disabled:opacity-50 transition-colors"
             >
               {submitting ? 'Saving…' : 'Save Abstract'}
             </button>

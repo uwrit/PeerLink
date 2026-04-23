@@ -52,7 +52,7 @@ export function MatchHistoryPage() {
         <select
           value={selectedProgram}
           onChange={(e) => setSelectedProgram(e.target.value)}
-          className="text-xs border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#1e3a6e] min-w-[220px]"
+          className="text-xs border border-gray-200 rounded px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#4b2e83] min-w-[220px]"
         >
           {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>

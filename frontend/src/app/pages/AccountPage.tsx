@@ -11,11 +11,11 @@ export function AccountPage() {
       </div>
 
       {/* Confidentiality notice */}
-      <div className="bg-white rounded border border-[#1e3a6e]/20 px-4 py-3">
+      <div className="bg-white rounded border border-[#4b2e83]/20 px-4 py-3">
         <div className="flex gap-3">
-          <AlertCircle className="h-4 w-4 text-[#1e3a6e] flex-shrink-0 mt-0.5" />
+          <AlertCircle className="h-4 w-4 text-[#4b2e83] flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-semibold text-[#1e3a6e] mb-0.5">Privileged Information Access</p>
+            <p className="text-xs font-semibold text-[#4b2e83] mb-0.5">Privileged Information Access</p>
             <p className="text-xs text-gray-600 leading-relaxed">
               This platform contains privileged applicant information and research abstracts.
               Access is restricted to authorized program coordinators. Please maintain the
