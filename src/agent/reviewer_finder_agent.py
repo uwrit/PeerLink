@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import Any, Callable
+from typing import Any, Callable, TypedDict
 
 from dotenv import load_dotenv
 
@@ -38,6 +38,64 @@ INSTITUTIONS = {
 }
 
 
+class InstitutionReviewerRequest(TypedDict):
+    institution: str
+    institution_id: str
+    num_reviewers: int
+
+
+def resolve_institution_requests(
+    institution_reviewer_counts: dict[str, int] | None = None,
+    *,
+    institution: str = "University of Washington",
+    institution_id: str | None = None,
+    num_reviewers: int = 5,
+) -> list[InstitutionReviewerRequest]:
+    """
+    Normalize matching config into per-institution requests.
+
+    The dashboard will pass institution-specific counts, while older callers can
+    keep using the single institution + num_reviewers parameters.
+    """
+    if institution_reviewer_counts:
+        requests: list[InstitutionReviewerRequest] = []
+        for name, count in institution_reviewer_counts.items():
+            if count <= 0:
+                continue
+            resolved_id = INSTITUTIONS.get(name)
+            if resolved_id is None:
+                raise ValueError(
+                    f"Unknown institution '{name}'. "
+                    f"Available: {', '.join(INSTITUTIONS.keys())}"
+                )
+            requests.append(
+                {
+                    "institution": name,
+                    "institution_id": resolved_id,
+                    "num_reviewers": int(count),
+                }
+            )
+        if not requests:
+            raise ValueError("At least one institution must request one or more reviewers.")
+        return requests
+
+    if institution_id is None:
+        institution_id = INSTITUTIONS.get(institution)
+        if institution_id is None:
+            raise ValueError(
+                f"Unknown institution '{institution}'. "
+                f"Available: {', '.join(INSTITUTIONS.keys())}"
+            )
+
+    return [
+        {
+            "institution": institution,
+            "institution_id": institution_id,
+            "num_reviewers": int(num_reviewers),
+        }
+    ]
+
+
 async def find_reviewers(
     abstract: str,
     institution: str = "University of Washington",
@@ -53,14 +111,14 @@ async def find_reviewers(
             on_progress(msg)
         print(msg)
 
-    # Resolve institution ID from the built-in lookup
-    if institution_id is None:
-        institution_id = INSTITUTIONS.get(institution)
-        if institution_id is None:
-            raise ValueError(
-                f"Unknown institution '{institution}'. "
-                f"Available: {', '.join(INSTITUTIONS.keys())}"
-            )
+    request = resolve_institution_requests(
+        institution=institution,
+        institution_id=institution_id,
+        num_reviewers=num_reviewers,
+    )[0]
+    institution = request["institution"]
+    institution_id = request["institution_id"]
+    num_reviewers = request["num_reviewers"]
 
     # Build the MCP server with our OpenAlex tools
     openalex_server = create_sdk_mcp_server(
@@ -96,7 +154,7 @@ async def find_reviewers(
         year_range_phrase = f"publications from {year_from} onward"
 
     user_prompt = (
-        f"Find {num_reviewers} peer reviewers from **{institution}** "
+        f"Find exactly {num_reviewers} peer reviewers from **{institution}** "
         f"(OpenAlex institution ID: `{institution_id}`) "
         f"({year_range_phrase}) for the following grant abstract:\n\n"
         f"---\n{abstract}\n---"

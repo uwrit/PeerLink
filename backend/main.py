@@ -4,9 +4,9 @@ from backend.routers import abstracts, matching, sync
 from backend.ws import websocket_matching
 
 app = FastAPI(title="PeerLink API")
+app.include_router(matching.router)
 app.include_router(sync.router)
 app.include_router(abstracts.router)
-app.include_router(matching.router)
 
 
 @app.websocket("/ws/matching/{job_id}")

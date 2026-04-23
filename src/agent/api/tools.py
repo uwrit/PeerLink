@@ -18,6 +18,13 @@ def _error(text: str) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": f"Error: {text}"}], "isError": True}
 
 
+def _with_api_key(url: str) -> str:
+    if not OPENALEX_API_KEY:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}api_key={OPENALEX_API_KEY}"
+
+
 @tool(
     "search_works",
     "Search OpenAlex for scholarly works. Returns titles, authors (with IDs and "
@@ -56,7 +63,7 @@ def _error(text: str) -> dict[str, Any]:
 )
 async def search_works(args: dict[str, Any]) -> dict[str, Any]:
     query = urllib.parse.quote(args["search_query"])
-    per_page = 20
+    per_page = min(int(args.get("per_page", 20)), 100)
 
     filters = []
     if inst := args.get("institution_id"):
@@ -74,10 +81,10 @@ async def search_works(args: dict[str, Any]) -> dict[str, Any]:
         f"?search={query}"
         f"&select=id,title,publication_year,cited_by_count,relevance_score,authorships"
         f"&per_page={per_page}"
-        f"&api_key={OPENALEX_API_KEY}"
     )
     if filters:
         url += f"&filter={','.join(filters)}"
+    url = _with_api_key(url)
 
     try:
         async with aiohttp.ClientSession() as session:
@@ -141,8 +148,8 @@ async def get_author_profile(args: dict[str, Any]) -> dict[str, Any]:
         f"{author_id}"
         f"?select=id,orcid,display_name,works_count,cited_by_count,"
         f"summary_stats,topics,affiliations,last_known_institutions"
-        f"&api_key={OPENALEX_API_KEY}"
     )
+    url = _with_api_key(url)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
@@ -221,7 +228,7 @@ async def get_author_profile(args: dict[str, Any]) -> dict[str, Any]:
 )
 async def search_author_works(args: dict[str, Any]) -> dict[str, Any]:
     author_id = args["author_id"]
-    per_page = 20
+    per_page = min(int(args.get("per_page", 20)), 100)
 
     filters = [f"authorships.author.id:{author_id}"]
     if yf := args.get("year_from"):
@@ -238,8 +245,8 @@ async def search_author_works(args: dict[str, Any]) -> dict[str, Any]:
         f"&select=id,title,publication_year,cited_by_count"
         f"&sort=cited_by_count:desc"
         f"&per_page={per_page}"
-        f"&api_key={OPENALEX_API_KEY}"
     )
+    url = _with_api_key(url)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:

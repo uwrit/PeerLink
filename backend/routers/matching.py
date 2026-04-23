@@ -3,8 +3,9 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from agent.reviewer_finder_agent import INSTITUTIONS
 from backend.services import job_storage, matcher
 from backend.services.storage import Storage, get_storage
 
@@ -20,16 +21,16 @@ def get_or_create_queue(job_id: int) -> asyncio.Queue:
     return _queues[job_id]
 
 
-class InstitutionConfig(BaseModel):
+class InstitutionRequest(BaseModel):
     name: str
-    count: int = 3
+    count: int = Field(ge=1, le=20)
 
 
 class MatchRequest(BaseModel):
     abstract_id: int
-    institutions: list[InstitutionConfig]
-    year_from: int = 2020
-    year_to: int | None = None
+    institutions: list[InstitutionRequest] = Field(min_length=1)
+    year_from: int = Field(default=2020, ge=1900)
+    year_to: int | None = Field(default=None, ge=1900)
 
 
 @router.post("/start")
@@ -38,6 +39,19 @@ async def start_matching(
     background_tasks: BackgroundTasks,
     storage: Storage = Depends(get_storage),
 ) -> dict[str, Any]:
+    if body.year_to is not None and body.year_to < body.year_from:
+        raise HTTPException(
+            status_code=400,
+            detail="'year_to' cannot be earlier than 'year_from'",
+        )
+
+    unknown = [inst.name for inst in body.institutions if inst.name not in INSTITUTIONS]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown institution(s): {', '.join(unknown)}",
+        )
+
     abstract = storage.get_by_id(body.abstract_id)
     if not abstract:
         raise HTTPException(status_code=404, detail="Abstract not found")
