@@ -98,7 +98,7 @@ export interface MatchJob {
   abstract_ids: number[]
   institutions: { name: string; count: number }[]
   progress: Record<string, string>
-  results: Record<string, ReviewerResult[]>
+  results: ReviewerResult[] | Record<string, ReviewerResult[]>
 }
 
 export interface ReviewerResult {

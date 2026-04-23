@@ -146,9 +146,15 @@ export function MatchHistoryPage() {
                 const isExpanded = expandedJobs.includes(job.id)
                 const institutionNames = job.institutions.map((i) => i.name).join(', ')
 
-                // results is a flat array; filter to real reviewer entries (have orcid or h_index)
+                // results is a flat array; filter to real reviewer entries (have orcid)
                 const resultsArr = Array.isArray(job.results) ? job.results : []
-                const realReviewers = resultsArr.filter((r) => r.orcid || r.h_index != null)
+                const realReviewers = resultsArr
+                  .filter((r) => r.orcid)
+                  .map((r) => {
+                    // reviewer_name is incorrectly set to a topic string; extract real name from raw
+                    const nameMatch = r.raw?.match(/\*\*Name:\*\*\s*(.+)/)
+                    return { ...r, reviewer_name: nameMatch ? nameMatch[1].trim() : r.reviewer_name }
+                  })
 
                 // group by institution
                 const byInstitution = realReviewers.reduce<Record<string, typeof realReviewers>>((acc, r) => {
