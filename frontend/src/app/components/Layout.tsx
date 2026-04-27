@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router'
 import { Menu, LayoutDashboard, History, ChevronLeft, FilePlus, FileText } from 'lucide-react'
+import ithsLogo from '../../assets/iths_logo.png'
 
 export function Layout() {
   const [isOpen, setIsOpen] = useState(true)
@@ -56,7 +57,9 @@ export function Layout() {
             <span className="text-2xl font-bold text-[#203E84]" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>
               PeerLink
             </span>
-            <span className="text-sm text-gray-400 border-l border-gray-200 pl-4">ITHS</span>
+            <div className="border-l border-gray-200 pl-4">
+              <img src={ithsLogo} alt="Institute of Translational Health Sciences" className="h-8 w-auto" />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
