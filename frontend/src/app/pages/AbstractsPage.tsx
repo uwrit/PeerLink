@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   Search, ChevronRight, Building2, User, Mail, BookOpen,
   Plus, Minus, X, FileText, ChevronDown, CheckCircle,
-  Archive, AlertCircle, Loader2,
+  AlertCircle, Loader2,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -25,7 +25,6 @@ export function AbstractsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProgram, setSelectedProgram] = useState('All Programs')
   const [matchStatusFilter, setMatchStatusFilter] = useState<string>('all')
-  const [showArchiveModal, setShowArchiveModal] = useState(false)
 
   // Detail panel form state
   const [selectedInstitutions, setSelectedInstitutions] = useState<string[]>([])
@@ -149,16 +148,6 @@ export function AbstractsPage() {
             >
               Abstracts
             </h1>
-            <Button
-              onClick={() => setShowArchiveModal(true)}
-              variant="outline"
-              size="sm"
-              disabled={selectedProgram === 'All Programs'}
-              className="border-[#203E84] text-[#203E84] hover:bg-[#203E84] hover:text-white text-xs disabled:opacity-40"
-            >
-              <Archive className="h-3.5 w-3.5 mr-1" />
-              Archive
-            </Button>
           </div>
 
           {/* Search */}

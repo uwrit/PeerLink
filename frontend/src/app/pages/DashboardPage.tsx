@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { FileText, Clock, AlertCircle, Users, CheckCircle2, RefreshCw } from 'lucide-react'
+import { FileText, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { usePeerLink } from '../context/PeerLinkContext'
 
@@ -18,7 +18,6 @@ export function DashboardPage() {
     unmatched: abstracts.filter((a) => a.matchStatus === 'unmatched').length,
     inProgress: abstracts.filter((a) => a.matchStatus === 'in-progress' || a.matchStatus === 'processing').length,
     matched: abstracts.filter((a) => a.matchStatus === 'matched').length,
-    reviewers: 0,
   }
 
   const getProgramStats = (program: string) => {
@@ -71,13 +70,12 @@ export function DashboardPage() {
           </div>
 
           {/* Overall Stats */}
-          <div className="grid grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-4 gap-4 mb-8">
             {[
               { label: 'Total Abstracts', value: totalStats.total, color: 'text-[#203E84]', icon: FileText },
               { label: 'Unmatched', value: totalStats.unmatched, color: 'text-red-600', icon: AlertCircle },
               { label: 'In Progress', value: totalStats.inProgress, color: 'text-amber-600', icon: Clock },
               { label: 'Matched', value: totalStats.matched, color: 'text-[#849B6F]', icon: CheckCircle2 },
-              { label: 'Reviewers Found', value: totalStats.reviewers, color: 'text-[#203E84]', icon: Users },
             ].map((stat) => (
               <div key={stat.label} className="bg-white rounded-xl shadow-sm p-5 border border-gray-200">
                 <div className="flex items-center gap-3 mb-2">
