@@ -37,6 +37,7 @@ def create_job(abstract_id: int, institutions: list[dict[str, Any]], year_from: 
             "status": "pending",
             "progress": {inst["name"]: "pending" for inst in institutions},
             "results": [],
+            "logs": {inst["name"]: [] for inst in institutions},
             "created_at": datetime.utcnow().isoformat(),
             "completed_at": None,
         }
@@ -73,5 +74,17 @@ def append_results(job_id: int, institution: str, new_results: list[dict[str, An
             if j.get("id") == job_id:
                 jobs[i]["results"].extend(new_results)
                 jobs[i]["progress"][institution] = "done"
+                _save(jobs)
+                return
+
+
+def append_log(job_id: int, institution: str, messages: list[str]) -> None:
+    with _lock:
+        jobs = _load()
+        for i, j in enumerate(jobs):
+            if j.get("id") == job_id:
+                if "logs" not in jobs[i]:
+                    jobs[i]["logs"] = {}
+                jobs[i]["logs"].setdefault(institution, []).extend(messages)
                 _save(jobs)
                 return
