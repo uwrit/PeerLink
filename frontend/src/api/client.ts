@@ -90,15 +90,15 @@ export interface MatchRequest {
 
 export interface MatchJob {
   id: number
+  abstract_id: number
   status: string
   created_at: string
   year_from: number
   year_to: number | null
-  total_reviewers_per_abstract: number
-  abstract_ids: number[]
   institutions: { name: string; count: number }[]
   progress: Record<string, string>
   results: ReviewerResult[] | Record<string, ReviewerResult[]>
+  logs?: Record<string, string[]>
 }
 
 export interface ReviewerResult {
@@ -106,7 +106,12 @@ export interface ReviewerResult {
   institution: string
   openalex_id?: string
   orcid?: string
+  affiliation?: string
   h_index?: number
+  works_count?: number
+  cited_by_count?: number
+  top_topics?: string[]
   justification?: string
   raw?: string
+  parse_error?: string
 }
