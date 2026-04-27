@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from agent.prompt import agent_prompt
-from agent.api.tools import search_works, get_author_profile, search_author_works
+from api.tools import search_works, get_author_profile, search_author_works
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from claude_agent_sdk import (
@@ -192,4 +192,4 @@ async def find_reviewers(
                     "duration_api_ms": message.duration_api_ms,
                 }
 
-    return "\n".join(output_parts), usage_stats
+    return output_parts[-1] if output_parts else "", usage_stats

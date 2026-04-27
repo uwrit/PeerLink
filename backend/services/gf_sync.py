@@ -7,7 +7,7 @@ from typing import Any
 from backend.config import settings
 from backend.services.affiliations import affiliation_from_email
 from backend.services.storage import Storage
-from agent.api.gravity_forms_client import GravityFormsClient, extract_pdf_text, parse_entry
+from api.gravity_forms_client import GravityFormsClient, extract_pdf_text, parse_entry
 
 logger = logging.getLogger(__name__)
 
