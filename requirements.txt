@@ -4,6 +4,5 @@ python-dotenv
 pypdf
 fastapi
 uvicorn[standard]
-websockets
 sqlmodel
 pymysql

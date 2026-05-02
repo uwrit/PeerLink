@@ -7,7 +7,6 @@ import {
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { usePeerLink, type MatchStatus, type MatchPayload } from '../context/PeerLinkContext'
-import { useMatchingWS } from '../../lib/useMatchingWS'
 
 const statusConfig: Record<MatchStatus, { label: string; color: string; dot: string }> = {
   unmatched: { label: 'Unmatched', color: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-400' },
@@ -17,7 +16,7 @@ const statusConfig: Record<MatchStatus, { label: string; color: string; dot: str
 }
 
 export function AbstractsPage() {
-  const { abstracts, programs, institutions, submitForReview, updateAbstract, removeLiveEntry, updateLiveEntry } = usePeerLink()
+  const { abstracts, programs, institutions, submitForReview, updateAbstract } = usePeerLink()
 
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null)
   const selectedApp = abstracts.find((a) => a.id === selectedAppId) ?? null
@@ -34,7 +33,6 @@ export function AbstractsPage() {
   const [endYear, setEndYear] = useState(2026)
   const [formSubmitted, setFormSubmitted] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-  const [activeJobId, setActiveJobId] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -47,7 +45,6 @@ export function AbstractsPage() {
     setFormSubmitted(false)
     setFormErrors({})
     setInstitutionDropdownOpen(false)
-    setActiveJobId(null)
   }, [selectedAppId])
 
   useEffect(() => {
@@ -59,18 +56,6 @@ export function AbstractsPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // WebSocket: track active job progress
-  useMatchingWS(activeJobId, (event) => {
-    if (!activeJobId) return
-    if (event.type === 'progress' && event.status === 'running') {
-      updateLiveEntry(activeJobId, 'in-progress')
-    }
-    if (event.type === 'done') {
-      removeLiveEntry(activeJobId)
-      setActiveJobId(null)
-    }
-  })
 
   const programOptions = ['All Programs', ...programs]
 
@@ -113,8 +98,7 @@ export function AbstractsPage() {
         year_from: fromYear,
         year_to: endYear,
       }
-      const jobId = await submitForReview(selectedApp.id, payload)
-      setActiveJobId(jobId)
+      await submitForReview(selectedApp.id, payload)
       setFormSubmitted(true)
     } catch (e) {
       setFormErrors({ submit: (e as Error).message })

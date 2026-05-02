@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Callable
+from typing import Any
 
 from agent.reviewer_finder_agent import find_reviewers
 from backend.services import job_storage
@@ -51,7 +51,6 @@ async def _run_one(
     num_reviewers: int,
     year_from: int,
     year_to: int | None,
-    on_event: Callable[[dict[str, Any]], None],
 ) -> None:
     async with _SEMAPHORE:
         job_storage.update_job(job_id, {
@@ -60,12 +59,10 @@ async def _run_one(
                 institution: "running",
             }
         })
-        on_event({"type": "progress", "institution": institution, "status": "running"})
         log_messages: list[str] = []
 
         def _on_progress(msg: str) -> None:
             log_messages.append(msg)
-            on_event({"type": "log", "institution": institution, "message": msg})
 
         try:
             output, usage = await find_reviewers(
@@ -80,7 +77,6 @@ async def _run_one(
             results = _parse_reviewers_from_output(output, institution)
             job_storage.append_results(job_id, institution, results)
             job_storage.append_log(job_id, institution, log_messages)
-            on_event({"type": "progress", "institution": institution, "status": "done", "count": len(results)})
         except Exception as exc:
             logger.error("Matching failed for institution %s: %s", institution, exc)
             job_storage.append_log(job_id, institution, log_messages)
@@ -90,7 +86,6 @@ async def _run_one(
                     institution: "error",
                 }
             })
-            on_event({"type": "progress", "institution": institution, "status": "error", "error": str(exc)})
 
 
 async def run_matching_job(
@@ -100,10 +95,8 @@ async def run_matching_job(
     institutions: list[dict[str, Any]],
     year_from: int,
     year_to: int | None,
-    on_event: Callable[[dict[str, Any]], None],
 ) -> None:
     job_storage.update_job(job_id, {"status": "running"})
-    on_event({"type": "started", "job_id": job_id})
 
     tasks = [
         _run_one(
@@ -114,11 +107,9 @@ async def run_matching_job(
             num_reviewers=inst["count"],
             year_from=year_from,
             year_to=year_to,
-            on_event=on_event,
         )
         for inst in institutions
     ]
     await asyncio.gather(*tasks)
 
     job_storage.update_job(job_id, {"status": "done"})
-    on_event({"type": "done", "job_id": job_id})

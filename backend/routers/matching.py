@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import Any
 
@@ -10,15 +9,6 @@ from backend.services import job_storage, matcher
 from backend.services.storage import Storage, get_storage
 
 router = APIRouter(prefix="/matching", tags=["matching"])
-
-# In-memory event queues keyed by job_id for WebSocket delivery
-_queues: dict[int, asyncio.Queue] = {}
-
-
-def get_or_create_queue(job_id: int) -> asyncio.Queue:
-    if job_id not in _queues:
-        _queues[job_id] = asyncio.Queue()
-    return _queues[job_id]
 
 
 class InstitutionRequest(BaseModel):
@@ -70,17 +60,10 @@ async def start_matching(
         year_to=body.year_to,
     )
     job_id = job["id"]
-    queue = get_or_create_queue(job_id)
 
     storage.update(body.abstract_id, {"status": "processing"})
 
     async def run():
-        def on_event(event: dict[str, Any]) -> None:
-            try:
-                asyncio.get_event_loop().call_soon_threadsafe(queue.put_nowait, event)
-            except Exception:
-                pass
-
         await matcher.run_matching_job(
             job_id=job_id,
             abstract_text=abstract_text,
@@ -88,10 +71,8 @@ async def start_matching(
             institutions=institutions,
             year_from=body.year_from,
             year_to=body.year_to,
-            on_event=on_event,
         )
         storage.update(body.abstract_id, {"status": "matched"})
-        queue.put_nowait({"type": "done", "job_id": job_id})
 
     background_tasks.add_task(run)
     return {"job_id": job_id, "status": "pending"}

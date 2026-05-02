@@ -37,8 +37,6 @@ interface PeerLinkContextType {
   submitForReview: (abstractId: number, payload: MatchPayload) => Promise<number>
   updateAbstract: (id: number, updates: Partial<Abstract>) => Promise<void>
   syncGravityForms: () => Promise<{ synced: number }>
-  updateLiveEntry: (jobId: number, status: 'processing' | 'in-progress') => void
-  removeLiveEntry: (jobId: number) => void
 }
 
 export interface MatchPayload {
@@ -128,33 +126,11 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
     return result
   }, [reload])
 
-  const updateLiveEntry = useCallback((jobId: number, status: 'processing' | 'in-progress') => {
-    setLiveMatchEntries((prev) =>
-      prev.map((e) => (e.jobId === jobId ? { ...e, status } : e))
-    )
-    if (status === 'in-progress') {
-      setAbstracts((prev) =>
-        prev.map((a) => {
-          const entry = liveMatchEntries.find((e) => e.jobId === jobId)
-          if (entry?.abstracts.some((ab) => ab.id === a.id)) {
-            return { ...a, matchStatus: 'in-progress' }
-          }
-          return a
-        })
-      )
-    }
-  }, [liveMatchEntries])
-
-  const removeLiveEntry = useCallback((jobId: number) => {
-    setLiveMatchEntries((prev) => prev.filter((e) => e.jobId !== jobId))
-    reload()
-  }, [reload])
-
   return (
     <PeerLinkContext.Provider value={{
       abstracts, liveMatchEntries, programs, institutions,
       loading, reload, submitForReview, updateAbstract,
-      syncGravityForms, updateLiveEntry, removeLiveEntry,
+      syncGravityForms,
     }}>
       {children}
     </PeerLinkContext.Provider>
