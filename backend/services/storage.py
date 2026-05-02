@@ -25,15 +25,17 @@ class JsonStorage:
         self._path = path
 
     def _load(self) -> list[dict[str, Any]]:
-        if not self._path.exists():
+        if not self._path.exists() or self._path.stat().st_size == 0:
             return []
         with open(self._path, encoding="utf-8") as f:
             return json.load(f)
 
     def _save(self, records: list[dict[str, Any]]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._path, "w", encoding="utf-8") as f:
+        tmp = self._path.with_suffix(self._path.suffix + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=2, default=str)
+        os.replace(tmp, self._path)
 
     def get_all(self) -> list[dict[str, Any]]:
         with _lock:

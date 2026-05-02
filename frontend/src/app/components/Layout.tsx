@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router'
-import { Menu, LayoutDashboard, History, ChevronLeft, FilePlus, FileText } from 'lucide-react'
+import { Menu, LayoutDashboard, History, ChevronLeft, FileText } from 'lucide-react'
 import ithsLogo from '../../assets/iths_logo.png'
 
 export function Layout() {
@@ -30,7 +30,6 @@ export function Layout() {
             {[
               { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
               { icon: FileText, label: 'Abstracts', path: '/abstracts' },
-              { icon: FilePlus, label: 'Add New Abstract', path: '/manual-entry' },
               { icon: History, label: 'Match History', path: '/match-history' },
             ].map((item) => (
               <Link

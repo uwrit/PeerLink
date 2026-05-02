@@ -12,7 +12,7 @@ _lock = threading.Lock()
 
 
 def _load() -> list[dict[str, Any]]:
-    if not _JOBS_FILE.exists():
+    if not _JOBS_FILE.exists() or _JOBS_FILE.stat().st_size == 0:
         return []
     with open(_JOBS_FILE, encoding="utf-8") as f:
         return json.load(f)
@@ -20,8 +20,10 @@ def _load() -> list[dict[str, Any]]:
 
 def _save(jobs: list[dict[str, Any]]) -> None:
     _JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(_JOBS_FILE, "w", encoding="utf-8") as f:
+    tmp = _JOBS_FILE.with_suffix(_JOBS_FILE.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(jobs, f, indent=2, default=str)
+    os.replace(tmp, _JOBS_FILE)
 
 
 def create_job(abstract_id: int, institutions: list[dict[str, Any]], year_from: int, year_to: int | None) -> dict[str, Any]:

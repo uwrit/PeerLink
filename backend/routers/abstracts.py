@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,36 +8,10 @@ from backend.services.storage import Storage, get_storage
 router = APIRouter(prefix="/abstracts", tags=["abstracts"])
 
 
-class AbstractCreate(BaseModel):
-    title: str
-    abstract_text: str
-    program: str
-    applicant_name: str
-    applicant_email: str
-    affiliation: str
-
-
 class AbstractPatch(BaseModel):
     status: str | None = None
     invitation_sent: bool | None = None
     accepted_review: bool | None = None
-
-
-@router.post("")
-def create_abstract(body: AbstractCreate, storage: Storage = Depends(get_storage)) -> dict[str, Any]:
-    record = {
-        "gf_entry_id": f"manual-{datetime.utcnow().timestamp()}",
-        "title": body.title,
-        "abstract_text": body.abstract_text,
-        "pdf_url": "",
-        "program": body.program,
-        "applicant_name": body.applicant_name,
-        "applicant_email": body.applicant_email,
-        "affiliation": body.affiliation,
-        "exclude_authors_json": "[]",
-        "submitted_at": datetime.utcnow().isoformat(),
-    }
-    return storage.upsert(record)
 
 
 @router.get("")

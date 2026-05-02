@@ -18,9 +18,8 @@ PeerLink is being rebuilt as a batch dashboard. The previous single-abstract Str
 **Pages** (from `src/app/routes.tsx`):
 1. `/` — **DashboardPage**: stats cards, program breakdown, recent activity
 2. `/abstracts` — **AbstractsPage**: list + detail panel with per-institution reviewer config form
-3. `/manual-entry` — **ManualEntryPage**: form to add abstracts manually
-4. `/match-history` — **MatchHistoryPage**: live activity + past match cycles
-5. `/account` — **AccountPage**
+3. `/match-history` — **MatchHistoryPage**: live activity + past match cycles
+4. `/account` — **AccountPage**
 
 **Key components**: `Layout` (sidebar + top bar), `BatchProcessModal` (batch config), `ArchiveCycleModal`, `AbstractDetailPanel`, `AbstractSidePanel`, plus full shadcn/ui set.
 
@@ -191,27 +190,26 @@ Single `docker-compose.yml` used everywhere — local machine and cloud. No over
 8. `GET /institutions` — returns `INSTITUTIONS` from `reviewer_finder_agent.py`, grouped by state for UI
 9. `GET /programs` — returns the 3 real award types from GF data
 10. `GET /abstracts` — list abstracts (filter by status, program)
-11. `POST /abstracts` — create abstract (ManualEntryPage — for edge cases outside GF)
-12. `PATCH /abstracts/{id}` — update fields (invitation_sent, accepted_review, etc.)
-13. `POST /matching/start` — `{ abstract_ids, institutions: [{name, count}], year_from, year_to, total_reviewers }`. Creates job, kicks off background task, returns `job_id`.
-14. `GET /matching/{job_id}` — returns job status + results
-15. `WebSocket /ws/matching/{job_id}` — streams agent progress
+11. `PATCH /abstracts/{id}` — update fields (invitation_sent, accepted_review, etc.)
+12. `POST /matching/start` — `{ abstract_ids, institutions: [{name, count}], year_from, year_to, total_reviewers }`. Creates job, kicks off background task, returns `job_id`.
+13. `GET /matching/{job_id}` — returns job status + results
+14. `WebSocket /ws/matching/{job_id}` — streams agent progress
 
 ### Phase 4: Multi-Institution Matcher Wrapper
-16. In `backend/services/matcher.py`: for each (abstract × institution) pair, call `find_reviewers(abstract_text, institution, num_reviewers, year_from, year_to, exclude_authors=abstract.exclude_authors)`. Fan out with `asyncio.gather()`, bound overall concurrency with `asyncio.Semaphore(2)` for API rate limits.
-17. **Pass COI exclusion list**: the `exclude_authors` from the GF entry (applicant-declared conflicts) must be threaded through to `find_reviewers()` so the agent's system prompt excludes them. This likely means adding an `exclude_authors` parameter to `find_reviewers()` — verify the current signature accepts it or extend it.
-18. Aggregate per-abstract results into merged records grouped by institution. Update `match_results` rows incrementally; emit WebSocket events on each state change.
-19. Progress model: `job.progress = { abstract_id: { institution: "pending"|"running"|"done"|"error" } }` for granular UI updates.
+15. In `backend/services/matcher.py`: for each (abstract × institution) pair, call `find_reviewers(abstract_text, institution, num_reviewers, year_from, year_to, exclude_authors=abstract.exclude_authors)`. Fan out with `asyncio.gather()`, bound overall concurrency with `asyncio.Semaphore(2)` for API rate limits.
+16. **Pass COI exclusion list**: the `exclude_authors` from the GF entry (applicant-declared conflicts) must be threaded through to `find_reviewers()` so the agent's system prompt excludes them. This likely means adding an `exclude_authors` parameter to `find_reviewers()` — verify the current signature accepts it or extend it.
+17. Aggregate per-abstract results into merged records grouped by institution. Update `match_results` rows incrementally; emit WebSocket events on each state change.
+18. Progress model: `job.progress = { abstract_id: { institution: "pending"|"running"|"done"|"error" } }` for granular UI updates.
 
 ### Phase 5: Port Frontend (strip mocks, wire to real API) + Frontend Dockerfile
-20. Create `frontend/` dir. Copy Figma Make `src/` into `frontend/src/`. Keep the existing `package.json` from Figma.
-21. Add `vite.config.ts` with dev proxy:
+19. Create `frontend/` dir. Copy Figma Make `src/` into `frontend/src/`. Keep the existing `package.json` from Figma.
+20. Add `vite.config.ts` with dev proxy:
     ```ts
     server: { proxy: { '/api': 'http://localhost:8000', '/ws': { target: 'ws://localhost:8000', ws: true } } }
     ```
-22. Create `frontend/src/api/client.ts` — fetch wrappers
-23. Create `frontend/src/lib/ws.ts` — WebSocket hook for live job progress
-24. **Strip mocks**:
+21. Create `frontend/src/api/client.ts` — fetch wrappers
+22. Create `frontend/src/lib/ws.ts` — WebSocket hook for live job progress
+23. **Strip mocks**:
     - `PeerLinkContext.tsx`: delete `initialAbstracts` and fake `setTimeout` transitions. Rewrite to fetch from API + listen to WebSocket. Keep exported interface unchanged.
     - `AbstractsPage.tsx`: delete local `institutionsByState` arrays; fetch from `GET /institutions`. Hide/disable the batch-selection checkboxes and "Run Batch" button — single-abstract only for MVP.
     - `BatchProcessModal.tsx`: leave file in place but do not wire it up; remove its trigger from the UI.
@@ -220,17 +218,16 @@ Single `docker-compose.yml` used everywhere — local machine and cloud. No over
     - `Layout.tsx`: remove/stub "Sarah Johnson" user block.
     - All pages: replace mock program labels (CAP/NIAP/ESPD) with real award types from `GET /programs`.
     - Remove the "phone" field from UI (not in GF data); keep affiliation (derived from email domain).
-25. Wire `handleFindReviewers` (single-abstract) to `POST /matching/start`. Do **not** wire `handleBatchRunMatching` — batch is deferred.
-26. Wire `ManualEntryPage` `handleSubmit` to `POST /abstracts` (kept for edge cases — primary source is GF sync).
-27. Add a "Sync from Gravity Forms" button somewhere (likely Dashboard or Account page) that calls `POST /sync/gravity-forms`.
-28. Add `frontend/Dockerfile` (multi-stage: build with node:20-alpine, serve with nginx:alpine) and `frontend/nginx.conf` (SPA fallback + `/api` & `/ws` reverse-proxy to `backend:8000` with WebSocket upgrade headers).
-29. Add the `frontend` service to `docker-compose.yml`.
+24. Wire `handleFindReviewers` (single-abstract) to `POST /matching/start`. Do **not** wire `handleBatchRunMatching` — batch is deferred.
+25. Add a "Sync from Gravity Forms" button somewhere (likely Dashboard or Account page) that calls `POST /sync/gravity-forms`.
+26. Add `frontend/Dockerfile` (multi-stage: build with node:20-alpine, serve with nginx:alpine) and `frontend/nginx.conf` (SPA fallback + `/api` & `/ws` reverse-proxy to `backend:8000` with WebSocket upgrade headers).
+27. Add the `frontend` service to `docker-compose.yml`.
 
 ### Phase 6: Run Everything
-30. `docker compose up --build` → db + backend + frontend come up. Only `:80` (frontend) is exposed; backend and db are reachable only on the internal network.
-31. First-time setup: `curl -X POST localhost/api/sync/gravity-forms` to populate ~363 abstracts (Nginx proxies to backend).
-32. Open http://localhost — Nginx serves React and proxies `/api` + `/ws` to backend.
-33. **Code-change workflow**: edit → `docker compose up --build` (or `docker compose build && docker compose up`) to rebuild the image. No hot reload; same as what will run in the cloud.
+28. `docker compose up --build` → db + backend + frontend come up. Only `:80` (frontend) is exposed; backend and db are reachable only on the internal network.
+29. First-time setup: `curl -X POST localhost/api/sync/gravity-forms` to populate ~363 abstracts (Nginx proxies to backend).
+30. Open http://localhost — Nginx serves React and proxies `/api` + `/ws` to backend.
+31. **Code-change workflow**: edit → `docker compose up --build` (or `docker compose build && docker compose up`) to rebuild the image. No hot reload; same as what will run in the cloud.
 
 ## Critical Files to Reference/Modify
 

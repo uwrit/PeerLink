@@ -20,9 +20,6 @@ export const api = {
     return request<Abstract[]>(`/abstracts${q.toString() ? `?${q}` : ''}`)
   },
 
-  createAbstract: (body: CreateAbstractBody) =>
-    request<Abstract>('/abstracts', { method: 'POST', body: JSON.stringify(body) }),
-
   updateAbstract: (id: number, body: Partial<Abstract>) =>
     request<Abstract>(`/abstracts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
@@ -65,15 +62,6 @@ export interface Abstract {
   accepted_review: boolean
   created_at: string
   updated_at: string
-}
-
-export interface CreateAbstractBody {
-  title: string
-  abstract_text: string
-  program: string
-  applicant_name: string
-  applicant_email: string
-  affiliation: string
 }
 
 export interface InstitutionGroup {
