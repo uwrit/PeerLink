@@ -11,6 +11,17 @@ _JOBS_FILE = Path(os.environ.get("JSON_JOBS_PATH", "data/jobs.json"))
 _lock = threading.Lock()
 
 
+def _use_mariadb() -> bool:
+    return os.environ.get("STORAGE_BACKEND", "json") == "mariadb"
+
+
+def _mariadb():
+    from backend.services.mariadb_storage import MariaDbJobStorage
+    return MariaDbJobStorage()
+
+
+# ── JSON helpers ──────────────────────────────────────────────────────────────
+
 def _load() -> list[dict[str, Any]]:
     if not _JOBS_FILE.exists() or _JOBS_FILE.stat().st_size == 0:
         return []
@@ -26,7 +37,11 @@ def _save(jobs: list[dict[str, Any]]) -> None:
     os.replace(tmp, _JOBS_FILE)
 
 
+# ── Public API (routes to the right backend) ──────────────────────────────────
+
 def create_job(abstract_id: int, institutions: list[dict[str, Any]], year_from: int, year_to: int | None) -> dict[str, Any]:
+    if _use_mariadb():
+        return _mariadb().create_job(abstract_id, institutions, year_from, year_to)
     with _lock:
         jobs = _load()
         new_id = max((j.get("id", 0) for j in jobs), default=0) + 1
@@ -49,12 +64,15 @@ def create_job(abstract_id: int, institutions: list[dict[str, Any]], year_from: 
 
 
 def get_job(job_id: int) -> dict[str, Any] | None:
+    if _use_mariadb():
+        return _mariadb().get_job(job_id)
     with _lock:
-        jobs = _load()
-        return next((j for j in jobs if j.get("id") == job_id), None)
+        return next((j for j in _load() if j.get("id") == job_id), None)
 
 
 def update_job(job_id: int, fields: dict[str, Any]) -> None:
+    if _use_mariadb():
+        return _mariadb().update_job(job_id, fields)
     with _lock:
         jobs = _load()
         for i, j in enumerate(jobs):
@@ -65,11 +83,15 @@ def update_job(job_id: int, fields: dict[str, Any]) -> None:
 
 
 def list_jobs() -> list[dict[str, Any]]:
+    if _use_mariadb():
+        return _mariadb().list_jobs()
     with _lock:
         return _load()
 
 
 def append_results(job_id: int, institution: str, new_results: list[dict[str, Any]]) -> None:
+    if _use_mariadb():
+        return _mariadb().append_results(job_id, institution, new_results)
     with _lock:
         jobs = _load()
         for i, j in enumerate(jobs):
@@ -81,12 +103,12 @@ def append_results(job_id: int, institution: str, new_results: list[dict[str, An
 
 
 def append_log(job_id: int, institution: str, messages: list[str]) -> None:
+    if _use_mariadb():
+        return _mariadb().append_log(job_id, institution, messages)
     with _lock:
         jobs = _load()
         for i, j in enumerate(jobs):
             if j.get("id") == job_id:
-                if "logs" not in jobs[i]:
-                    jobs[i]["logs"] = {}
-                jobs[i]["logs"].setdefault(institution, []).extend(messages)
+                jobs[i].setdefault("logs", {}).setdefault(institution, []).extend(messages)
                 _save(jobs)
                 return

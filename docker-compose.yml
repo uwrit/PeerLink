@@ -1,4 +1,24 @@
 services:
+  db:
+    image: mariadb:11
+    env_file:
+      - .env
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: peerlink
+      MARIADB_USER: peerlink
+      MARIADB_PASSWORD: peerlink
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - peerlink
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -9,6 +29,9 @@ services:
       - "8000:8000"
     volumes:
       - abstract_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - peerlink
 
@@ -27,4 +50,5 @@ networks:
   peerlink:
 
 volumes:
+  db_data:
   abstract_data:

@@ -91,4 +91,8 @@ _json_storage = JsonStorage()
 
 
 def get_storage() -> Storage:
+    backend = os.environ.get("STORAGE_BACKEND", "json")
+    if backend == "mariadb":
+        from backend.services.mariadb_storage import MariaDbStorage
+        return MariaDbStorage()
     return _json_storage
