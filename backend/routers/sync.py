@@ -9,6 +9,7 @@ router = APIRouter(prefix="/sync", tags=["sync"])
 @router.post("/gravity-forms")
 async def trigger_sync(storage: Storage = Depends(get_storage)) -> dict[str, int]:
     try:
-        return await sync_gravity_forms(storage)
+        result = await sync_gravity_forms(storage)
+        return {"synced": result["inserted"] + result["updated"]}
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))

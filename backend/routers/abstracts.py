@@ -28,14 +28,6 @@ def list_abstracts(
     return records
 
 
-@router.get("/{abstract_id}")
-def get_abstract(abstract_id: int, storage: Storage = Depends(get_storage)) -> dict[str, Any]:
-    record = storage.get_by_id(abstract_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Abstract not found")
-    return record
-
-
 @router.patch("/{abstract_id}")
 def patch_abstract(
     abstract_id: int,

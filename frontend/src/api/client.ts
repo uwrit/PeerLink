@@ -35,9 +35,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  getJob: (jobId: number) =>
-    request<MatchJob>(`/matching/${jobId}`),
-
   getMatchJobs: () =>
     request<MatchJob[]>('/matching/jobs'),
 

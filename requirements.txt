@@ -4,5 +4,4 @@ python-dotenv
 pypdf
 fastapi
 uvicorn[standard]
-sqlmodel
 pymysql
