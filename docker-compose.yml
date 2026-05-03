@@ -27,6 +27,8 @@ services:
       dockerfile: backend/Dockerfile
     env_file:
       - .env
+    environment:
+      DATABASE_URL: mysql+pymysql://peerlink:peerlink@db:3306/peerlink
     ports:
       - "8000:8000"
     volumes:

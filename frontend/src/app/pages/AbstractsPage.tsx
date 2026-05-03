@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { usePeerLink, type MatchStatus, type MatchPayload } from '../context/PeerLinkContext'
+import { usePeerLink, type MatchStatus, type MatchPayload, PROGRAMS, INSTITUTIONS } from '../context/PeerLinkContext'
 
 const statusConfig: Record<MatchStatus, { label: string; color: string; dot: string }> = {
   unmatched: { label: 'Unmatched', color: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-400' },
@@ -16,7 +16,7 @@ const statusConfig: Record<MatchStatus, { label: string; color: string; dot: str
 }
 
 export function AbstractsPage() {
-  const { abstracts, programs, institutions, submitForReview, updateAbstract } = usePeerLink()
+  const { abstracts, submitForReview, updateAbstract } = usePeerLink()
 
   const [selectedAppId, setSelectedAppId] = useState<number | null>(null)
   const selectedApp = abstracts.find((a) => a.id === selectedAppId) ?? null
@@ -24,6 +24,7 @@ export function AbstractsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProgram, setSelectedProgram] = useState('All Programs')
   const [matchStatusFilter, setMatchStatusFilter] = useState<string>('all')
+  const [selectedYear, setSelectedYear] = useState('All Years')
 
   // Detail panel form state
   const [selectedInstitutions, setSelectedInstitutions] = useState<string[]>([])
@@ -57,7 +58,11 @@ export function AbstractsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const programOptions = ['All Programs', ...programs]
+  const programOptions = ['All Programs', ...PROGRAMS]
+
+  const yearOptions = ['All Years', ...Array.from(new Set(
+    abstracts.map((a) => a.submitted ? new Date(a.submitted).getFullYear().toString() : null).filter(Boolean) as string[]
+  )).sort((a, b) => Number(b) - Number(a))]
 
   const filtered = abstracts.filter((a) => {
     const matchesProgram = selectedProgram === 'All Programs' || a.program === selectedProgram
@@ -66,7 +71,9 @@ export function AbstractsPage() {
       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.affiliation.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = matchStatusFilter === 'all' || a.matchStatus === matchStatusFilter
-    return matchesProgram && matchesSearch && matchesStatus
+    const matchesYear = selectedYear === 'All Years' ||
+      (a.submitted ? new Date(a.submitted).getFullYear().toString() === selectedYear : false)
+    return matchesProgram && matchesSearch && matchesStatus && matchesYear
   })
 
   const toggleInstitution = (uni: string) => {
@@ -107,10 +114,12 @@ export function AbstractsPage() {
     }
   }
 
-  const currentProgramCount =
-    selectedProgram === 'All Programs'
-      ? abstracts.length
-      : abstracts.filter((a) => a.program === selectedProgram).length
+  const currentProgramCount = abstracts.filter((a) => {
+    const matchesProgram = selectedProgram === 'All Programs' || a.program === selectedProgram
+    const matchesYear = selectedYear === 'All Years' ||
+      (a.submitted ? new Date(a.submitted).getFullYear().toString() === selectedYear : false)
+    return matchesProgram && matchesYear
+  }).length
 
   const abstractIsActive =
     selectedApp?.matchStatus === 'processing' || selectedApp?.matchStatus === 'in-progress'
@@ -157,6 +166,17 @@ export function AbstractsPage() {
                 {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            </div>
+
+            <div className="relative flex-shrink-0">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="appearance-none text-xs bg-white border border-gray-200 rounded-lg pl-3 pr-7 py-2 text-gray-700 outline-none focus:ring-2 focus:ring-[#849B6F]/40 focus:border-[#849B6F] cursor-pointer"
+              >
+                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             </div>
 
             <div className="relative flex-shrink-0">
@@ -404,7 +424,7 @@ export function AbstractsPage() {
 
                       {institutionDropdownOpen && (
                         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto">
-                          {institutions.map((group) => (
+                          {INSTITUTIONS.map((group) => (
                             <div key={group.state}>
                               <div className="px-4 py-2 bg-[#E8F0DD]/60 sticky top-0">
                                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.state}</span>

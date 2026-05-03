@@ -7,14 +7,14 @@ What it does:
   2. Seeds synthetic match jobs for previous year (2024), current year (2025),
      and next year (2026) so the UI has data across all time ranges
 
-Usage:
+Usage (local, DB on host port 3307):
   STORAGE_BACKEND=mariadb \
-  DATABASE_URL=mysql+pymysql://peerlink:peerlink@localhost:3306/peerlink \
+  DATABASE_URL=mysql+pymysql://peerlink:peerlink@localhost:3307/peerlink \
   GRAVITY_FORMS_API_CONSUMER_KEY=... \
   GRAVITY_FORMS_API_CONSUMER_SECRET=... \
   python scripts/populate_db.py
 
-  Or if running inside Docker:
+  Or if running inside Docker (DB reachable as "db:3306" from within the network):
     docker compose exec backend python scripts/populate_db.py
 """
 
@@ -24,8 +24,10 @@ import os
 import sys
 from datetime import datetime, timezone
 
-# Make sure the project root is on the path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Make sure the project root and src/ are on the path
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _root)
+sys.path.insert(0, os.path.join(_root, "src"))
 
 os.environ.setdefault("STORAGE_BACKEND", "mariadb")
 
@@ -96,12 +98,6 @@ SEED_INSTITUTIONS = [
     {"name": "Washington State University", "count": 2},
 ]
 
-SEED_PROGRAMS = [
-    "Early-Stage Product Development Award",
-    "New Interdisciplinary Academic Collaborations",
-    "Academic Community Partnerships",
-]
-
 SAMPLE_REVIEWERS = {
     "University of Washington": [
         {
@@ -138,19 +134,13 @@ SAMPLE_REVIEWERS = {
 }
 
 
-def seed_jobs(abstracts: list[dict]) -> None:
+def seed_jobs(abstracts: list[dict], storage) -> None:
     """Seed one completed job per year (2024, 2025, 2026) using real abstracts if available."""
     print("\n[Step 2] Seeding synthetic match jobs...")
 
-    # Check which years already have seed jobs
+    # Check which years already have seed jobs (keyed by year_from on seeded jobs)
     existing_jobs = job_storage.list_jobs()
-    seeded_years = set()
-    for j in existing_jobs:
-        data = j if isinstance(j, dict) else {}
-        note = data.get("seed_note", "")
-        for yr in [2024, 2025, 2026]:
-            if str(yr) in note:
-                seeded_years.add(yr)
+    seeded_years = {j["year_from"] for j in existing_jobs if j.get("seed_note")}
 
     years = [
         (2024, 2024),  # previous year
@@ -187,6 +177,7 @@ def seed_jobs(abstracts: list[dict]) -> None:
             "completed_at": now_iso(),
             "seed_note": f"Seeded by populate_db.py for year {year_from}",
         })
+        storage.update(abstract_id, {"status": "matched"})
 
         print(f"  [Year {year_from}] Created job #{job['id']} for abstract_id={abstract_id} "
               f"with {len(results)} reviewers.")
@@ -212,7 +203,7 @@ async def main() -> None:
     abstracts = storage.get_all()
     print(f"[DB] Abstracts after sync: {len(abstracts)}")
 
-    seed_jobs(abstracts)
+    seed_jobs(abstracts, storage)
 
     a_after, j_after = count_rows()
     print(f"\n[DB] Final state: {a_after} abstracts, {j_after} jobs")

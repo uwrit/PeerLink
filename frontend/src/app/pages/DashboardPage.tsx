@@ -2,16 +2,15 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { FileText, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
-import { usePeerLink } from '../context/PeerLinkContext'
+import { usePeerLink, PROGRAMS } from '../context/PeerLinkContext'
 
 export function DashboardPage() {
-  const { abstracts, programs, syncGravityForms } = usePeerLink()
+  const { abstracts, syncGravityForms } = usePeerLink()
   const [selectedProgram, setSelectedProgram] = useState<string>('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
-  const displayPrograms = programs.length > 0 ? programs : []
-  const activeProgram = selectedProgram || displayPrograms[0] || ''
+  const activeProgram = selectedProgram || PROGRAMS[0] || ''
 
   const totalStats = {
     total: abstracts.length,
@@ -92,17 +91,15 @@ export function DashboardPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="font-semibold text-[#203E84]">Program Breakdown</h2>
-                {displayPrograms.length > 0 && (
-                  <select
-                    value={activeProgram}
-                    onChange={(e) => setSelectedProgram(e.target.value)}
-                    className="text-sm border-2 border-[#849B6F] rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] font-medium text-gray-700 min-w-[260px]"
-                  >
-                    {displayPrograms.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                )}
+                <select
+                  value={activeProgram}
+                  onChange={(e) => setSelectedProgram(e.target.value)}
+                  className="text-sm border-2 border-[#849B6F] rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] font-medium text-gray-700 min-w-[260px]"
+                >
+                  {PROGRAMS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="p-5">
@@ -150,13 +147,12 @@ export function DashboardPage() {
             </div>
 
             {/* All Programs Summary */}
-            {displayPrograms.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-5 border-b border-gray-100">
-                  <h2 className="font-semibold text-[#203E84]">All Programs Summary</h2>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {displayPrograms.map((program) => {
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-5 border-b border-gray-100">
+                <h2 className="font-semibold text-[#203E84]">All Programs Summary</h2>
+              </div>
+              <div className="divide-y divide-gray-100">
+                  {PROGRAMS.map((program) => {
                     const ps = getProgramStats(program)
                     const pct = ps.total > 0 ? Math.round((ps.matched / ps.total) * 100) : 0
                     return (
@@ -179,7 +175,6 @@ export function DashboardPage() {
                   })}
                 </div>
               </div>
-            )}
 
             {abstracts.length === 0 && (
               <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200">

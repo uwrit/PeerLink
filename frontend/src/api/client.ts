@@ -23,12 +23,6 @@ export const api = {
   updateAbstract: (id: number, body: Partial<Abstract>) =>
     request<Abstract>(`/abstracts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
-  getInstitutions: () =>
-    request<InstitutionGroup[]>('/institutions'),
-
-  getPrograms: () =>
-    request<string[]>('/programs'),
-
   startMatching: (body: MatchRequest) =>
     request<{ job_id: number; status: string }>('/matching/start', {
       method: 'POST',
@@ -61,11 +55,6 @@ export interface Abstract {
   updated_at: string
 }
 
-export interface InstitutionGroup {
-  state: string
-  universities: string[]
-}
-
 export interface MatchRequest {
   abstract_id: number
   institutions: { name: string; count: number }[]
@@ -82,7 +71,7 @@ export interface MatchJob {
   year_to: number | null
   institutions: { name: string; count: number }[]
   progress: Record<string, string>
-  results: ReviewerResult[] | Record<string, ReviewerResult[]>
+  results: ReviewerResult[]
   logs?: Record<string, string[]>
 }
 

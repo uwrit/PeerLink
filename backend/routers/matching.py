@@ -81,11 +81,3 @@ async def start_matching(
 @router.get("/jobs")
 def list_jobs() -> list[dict[str, Any]]:
     return job_storage.list_jobs()
-
-
-@router.get("/{job_id}")
-def get_job(job_id: int) -> dict[str, Any]:
-    job = job_storage.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job

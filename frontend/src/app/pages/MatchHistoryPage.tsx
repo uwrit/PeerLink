@@ -4,7 +4,7 @@ import {
   User, CalendarDays, Building2, BookOpen, ExternalLink, X,
 } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
-import { usePeerLink } from '../context/PeerLinkContext'
+import { usePeerLink, PROGRAMS } from '../context/PeerLinkContext'
 import { api, MatchJob } from '../../api/client'
 
 interface JustificationModal {
@@ -175,7 +175,7 @@ function formatTime(date: Date): string {
 }
 
 export function MatchHistoryPage() {
-  const { liveMatchEntries, abstracts, programs } = usePeerLink()
+  const { liveMatchEntries, abstracts } = usePeerLink()
   const [selectedProgram, setSelectedProgram] = useState('All Programs')
   const [expandedJobs, setExpandedJobs] = useState<number[]>([])
   const [expandedLive, setExpandedLive] = useState<string[]>([])
@@ -185,8 +185,9 @@ export function MatchHistoryPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
   const [activeLogJob, setActiveLogJob] = useState<{ jobId: number; logs: Record<string, string[]> } | null>(null)
   const closeLogModal = useCallback(() => setActiveLogJob(null), [])
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
 
-  const programOptions = ['All Programs', ...programs]
+  const programOptions = ['All Programs', ...PROGRAMS]
 
   useEffect(() => {
     api.getMatchJobs()
@@ -209,10 +210,15 @@ export function MatchHistoryPage() {
     (e) => selectedProgram === 'All Programs' || e.programs.includes(selectedProgram)
   )
 
+  const yearOptions = ['All Years', ...Array.from(new Set(pastJobs.map((j) => String(j.year_from)))).sort((a, b) => Number(b) - Number(a))]
+
   const filteredPastJobs = pastJobs.filter((job) => {
-    if (selectedProgram === 'All Programs') return true
-    const abstract = abstracts.find((a) => a.id === job.abstract_id)
-    return abstract?.program === selectedProgram
+    if (selectedProgram !== 'All Programs') {
+      const abstract = abstracts.find((a) => a.id === job.abstract_id)
+      if (abstract?.program !== selectedProgram) return false
+    }
+    if (selectedYear !== 'All Years' && String(job.year_from) !== selectedYear) return false
+    return true
   })
 
   return (
@@ -225,15 +231,27 @@ export function MatchHistoryPage() {
             <h1 className="text-3xl font-semibold text-[#203E84] mb-1">Match History</h1>
             <p className="text-gray-500 text-sm">Reviewer matches organized by abstract</p>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Program:</label>
-            <select
-              value={selectedProgram}
-              onChange={(e) => setSelectedProgram(e.target.value)}
-              className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] text-gray-700 min-w-[260px] shadow-sm"
-            >
-              {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Year:</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] text-gray-700 shadow-sm"
+              >
+                {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Program:</label>
+              <select
+                value={selectedProgram}
+                onChange={(e) => setSelectedProgram(e.target.value)}
+                className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] text-gray-700 min-w-[260px] shadow-sm"
+              >
+                {programOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -319,8 +337,7 @@ export function MatchHistoryPage() {
                 const abstract = abstracts.find((a) => a.id === job.abstract_id)
                 const isExpanded = expandedJobs.includes(job.id)
 
-                const resultsArr = Array.isArray(job.results) ? job.results : []
-                const reviewers = resultsArr.filter((r) => r.reviewer_name)
+                const reviewers = (job.results ?? []).filter((r) => r.reviewer_name)
 
                 // Group reviewers by institution
                 const byInstitution = reviewers.reduce<Record<string, typeof reviewers>>(
@@ -338,7 +355,7 @@ export function MatchHistoryPage() {
                   : `${job.year_from}–present`
 
                 const hasResults = reviewers.length > 0
-                const hasErrors = resultsArr.some((r) => r.parse_error)
+                const hasErrors = reviewers.some((r) => r.parse_error)
 
                 return (
                   <div key={job.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

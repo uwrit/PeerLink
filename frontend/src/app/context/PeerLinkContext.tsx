@@ -1,6 +1,20 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import { api, Abstract as APIAbstract } from '../../api/client'
 
+export const PROGRAMS = [
+  'Early-Stage Product Development Award',
+  'New Interdisciplinary Academic Collaborations',
+  'Academic Community Partnerships',
+]
+
+export const INSTITUTIONS: { state: string; universities: string[] }[] = [
+  { state: 'Alaska', universities: ['University of Alaska Anchorage', 'University of Alaska Fairbanks', 'University of Alaska Southeast'] },
+  { state: 'Idaho', universities: ['Boise State University', 'Idaho State University', 'University of Idaho'] },
+  { state: 'Montana', universities: ['Montana State University', 'Montana Technological University', 'University of Montana'] },
+  { state: 'Washington', universities: ['Central Washington University', 'Eastern Washington University', 'Gonzaga University', 'University of Washington', 'Washington State University', 'Western Washington University'] },
+  { state: 'Wyoming', universities: ['University of Wyoming'] },
+]
+
 export type MatchStatus = 'unmatched' | 'processing' | 'in-progress' | 'matched'
 
 export interface Abstract {
@@ -30,8 +44,6 @@ export interface LiveMatchEntry {
 interface PeerLinkContextType {
   abstracts: Abstract[]
   liveMatchEntries: LiveMatchEntry[]
-  programs: string[]
-  institutions: { state: string; universities: string[] }[]
   loading: boolean
   reload: () => Promise<void>
   submitForReview: (abstractId: number, payload: MatchPayload) => Promise<number>
@@ -68,21 +80,13 @@ function toAbstract(a: APIAbstract): Abstract {
 export function PeerLinkProvider({ children }: { children: ReactNode }) {
   const [abstracts, setAbstracts] = useState<Abstract[]>([])
   const [liveMatchEntries, setLiveMatchEntries] = useState<LiveMatchEntry[]>([])
-  const [programs, setPrograms] = useState<string[]>([])
-  const [institutions, setInstitutions] = useState<{ state: string; universities: string[] }[]>([])
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
     setLoading(true)
     try {
-      const [abs, progs, insts] = await Promise.all([
-        api.getAbstracts(),
-        api.getPrograms(),
-        api.getInstitutions(),
-      ])
+      const abs = await api.getAbstracts()
       setAbstracts(abs.map(toAbstract))
-      setPrograms(progs)
-      setInstitutions(insts)
     } finally {
       setLoading(false)
     }
@@ -128,7 +132,7 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
 
   return (
     <PeerLinkContext.Provider value={{
-      abstracts, liveMatchEntries, programs, institutions,
+      abstracts, liveMatchEntries,
       loading, reload, submitForReview, updateAbstract,
       syncGravityForms,
     }}>
