@@ -1,6 +1,5 @@
 import io
 from typing import Any
-
 import aiohttp
 
 GF_BASE = "https://www.iths.org/wp-json/gf/v2"
@@ -25,7 +24,7 @@ class GravityFormsClient:
     async def get_all_entries(
         self,
         form_id: int = FORM_ID,
-        page_size: int = 4,
+        page_size: int = 5,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
         """Fetch the most recent entries for the form (single request, no pagination)."""
@@ -54,17 +53,12 @@ class GravityFormsClient:
                 return await resp.read()
 
 
-# ---------------------------------------------------------------------------
 # PDF text extraction (sync helper — call from sync context or thread)
-# ---------------------------------------------------------------------------
-
-def extract_pdf_text(pdf_bytes: bytes, abstract_only: bool = False) -> str:
-    """
-    Extract plain text from a PDF.
-    If abstract_only=True, returns only the text between the "Abstract" heading
-    and the next top-level section heading (or end of extracted text).
-    Returns an empty string if extraction fails.
-    """
+def extract_pdf_text(
+    pdf_bytes: bytes,
+    abstract_only: bool = False,
+    max_pages: int | None = None,
+) -> str:
     import re
 
     try:
@@ -76,7 +70,7 @@ def extract_pdf_text(pdf_bytes: bytes, abstract_only: bool = False) -> str:
 
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
-        pages = reader.pages
+        pages = reader.pages if max_pages is None else reader.pages[:max_pages]
         parts = []
         for page in pages:
             text = page.extract_text()

@@ -19,7 +19,9 @@ async def _fetch_abstract_text(client: GravityFormsClient, pdf_url: str, label: 
     try:
         pdf_bytes = await client.download_pdf(pdf_url)
         print(f"  [PDF] Extracting abstract: {label or pdf_url}")
-        result = extract_pdf_text(pdf_bytes, abstract_only=True)
+        result = await asyncio.to_thread(
+            extract_pdf_text, pdf_bytes, True, max_pages=3
+        )
         print(f"  [PDF] Done: {label or pdf_url} ({len(result)} chars)")
         return result
     except Exception as exc:
