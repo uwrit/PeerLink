@@ -25,6 +25,7 @@ export function AbstractsPage() {
   const [selectedProgram, setSelectedProgram] = useState('All Programs')
   const [matchStatusFilter, setMatchStatusFilter] = useState<string>('all')
   const [selectedYear, setSelectedYear] = useState('All Years')
+  const [yearDefaultSet, setYearDefaultSet] = useState(false)
 
   // Detail panel form state
   const [selectedInstitutions, setSelectedInstitutions] = useState<string[]>([])
@@ -63,6 +64,13 @@ export function AbstractsPage() {
   const yearOptions = ['All Years', ...Array.from(new Set(
     abstracts.map((a) => a.submitted ? new Date(a.submitted).getFullYear().toString() : null).filter(Boolean) as string[]
   )).sort((a, b) => Number(b) - Number(a))]
+
+  useEffect(() => {
+    if (!yearDefaultSet && yearOptions.length > 1) {
+      setSelectedYear(yearOptions[1])
+      setYearDefaultSet(true)
+    }
+  }, [yearOptions, yearDefaultSet])
 
   const filtered = abstracts.filter((a) => {
     const matchesProgram = selectedProgram === 'All Programs' || a.program === selectedProgram

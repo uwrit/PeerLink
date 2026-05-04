@@ -186,6 +186,7 @@ export function MatchHistoryPage() {
   const [activeLogJob, setActiveLogJob] = useState<{ jobId: number; logs: Record<string, string[]> } | null>(null)
   const closeLogModal = useCallback(() => setActiveLogJob(null), [])
   const [selectedYear, setSelectedYear] = useState('All Years')
+  const [yearDefaultSet, setYearDefaultSet] = useState(false)
 
   const programOptions = ['All Programs', ...PROGRAMS]
 
@@ -216,6 +217,13 @@ export function MatchHistoryPage() {
       return abstract?.submitted ? new Date(abstract.submitted).getFullYear().toString() : null
     }).filter(Boolean) as string[]
   )).sort((a, b) => Number(b) - Number(a))]
+
+  useEffect(() => {
+    if (!yearDefaultSet && yearOptions.length > 1) {
+      setSelectedYear(yearOptions[1])
+      setYearDefaultSet(true)
+    }
+  }, [yearOptions, yearDefaultSet])
 
   const filteredPastJobs = pastJobs.filter((job) => {
     const abstract = abstracts.find((a) => a.id === job.abstract_id)
