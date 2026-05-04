@@ -1,6 +1,6 @@
 services:
   db:
-    image: mariadb:11
+    image: mariadb
     env_file:
       - .env
     environment:
