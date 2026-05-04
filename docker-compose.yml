@@ -50,7 +50,7 @@ services:
     networks:
       - peerlink
 
-  populate:
+  sync:
     build:
       context: .
       dockerfile: backend/Dockerfile
