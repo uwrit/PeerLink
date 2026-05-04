@@ -185,7 +185,7 @@ export function MatchHistoryPage() {
   const closeModal = useCallback(() => setActiveModal(null), [])
   const [activeLogJob, setActiveLogJob] = useState<{ jobId: number; logs: Record<string, string[]> } | null>(null)
   const closeLogModal = useCallback(() => setActiveLogJob(null), [])
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
+  const [selectedYear, setSelectedYear] = useState('All Years')
 
   const programOptions = ['All Programs', ...PROGRAMS]
 
@@ -210,14 +210,20 @@ export function MatchHistoryPage() {
     (e) => selectedProgram === 'All Programs' || e.programs.includes(selectedProgram)
   )
 
-  const yearOptions = ['All Years', ...Array.from(new Set(pastJobs.map((j) => String(j.year_from)))).sort((a, b) => Number(b) - Number(a))]
+  const yearOptions = ['All Years', ...Array.from(new Set(
+    pastJobs.map((j) => {
+      const abstract = abstracts.find((a) => a.id === j.abstract_id)
+      return abstract?.submitted ? new Date(abstract.submitted).getFullYear().toString() : null
+    }).filter(Boolean) as string[]
+  )).sort((a, b) => Number(b) - Number(a))]
 
   const filteredPastJobs = pastJobs.filter((job) => {
-    if (selectedProgram !== 'All Programs') {
-      const abstract = abstracts.find((a) => a.id === job.abstract_id)
-      if (abstract?.program !== selectedProgram) return false
+    const abstract = abstracts.find((a) => a.id === job.abstract_id)
+    if (selectedProgram !== 'All Programs' && abstract?.program !== selectedProgram) return false
+    if (selectedYear !== 'All Years') {
+      const submittedYear = abstract?.submitted ? new Date(abstract.submitted).getFullYear().toString() : null
+      if (submittedYear !== selectedYear) return false
     }
-    if (selectedYear !== 'All Years' && String(job.year_from) !== selectedYear) return false
     return true
   })
 
