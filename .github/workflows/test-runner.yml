@@ -1,0 +1,17 @@
+name: Test self-hosted action runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: [self-hosted, peerlink-rit-pub-con1]
+    steps:
+      - name: Check runner hostname
+        run: hostname
+
+      - name: Check Docker access
+        run: docker ps
+
+      - name: Check DOCKER_HOST
+        run: echo $DOCKER_HOST
