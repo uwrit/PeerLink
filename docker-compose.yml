@@ -31,8 +31,6 @@ services:
       DATABASE_URL: mysql+pymysql://peerlink:peerlink@db:3306/peerlink
     ports:
       - "8000:8000"
-    volumes:
-      - abstract_data:/app/data
     depends_on:
       db:
         condition: service_healthy
@@ -56,4 +54,3 @@ networks:
 
 volumes:
   db_data:
-  abstract_data:
