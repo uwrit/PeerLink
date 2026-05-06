@@ -1,7 +1,11 @@
 name: Peerlink Container Refresh
 
 on:
+  push:
+    branches:
+      - "dashboard-dev"
   workflow_dispatch:
+
 
 jobs:
 
