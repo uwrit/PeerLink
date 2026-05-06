@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import Any
 
-from backend.db import cursor
+from backend.db import cursor, transaction
 
 
 class MariaDbStorage:
@@ -32,29 +32,18 @@ class MariaDbStorage:
         gf_id = record.get("gf_entry_id")
 
         with cursor() as cur:
-            existing = None
             if gf_id:
-                cur.execute("SELECT id, data FROM abstracts WHERE gf_entry_id = %s", (gf_id,))
+                cur.execute("SELECT data FROM abstracts WHERE gf_entry_id = %s", (gf_id,))
                 row = cur.fetchone()
                 if row:
-                    existing = json.loads(row["data"])
-                    merged = {
-                        **existing,
-                        **record,
-                        "updated_at": now,
-                    }
+                    merged = {**json.loads(row["data"]), **record, "updated_at": now}
                     cur.execute(
                         "UPDATE abstracts SET data = %s WHERE gf_entry_id = %s",
                         (json.dumps(merged, default=str), gf_id),
                     )
                     return merged
 
-            # Insert new record
-            cur.execute("SELECT MAX(id) AS max_id FROM abstracts")
-            row = cur.fetchone()
-            new_id = (row["max_id"] or 0) + 1
             new_record = {
-                "id": new_id,
                 "status": "unmatched",
                 "invitation_sent": False,
                 "accepted_review": False,
@@ -63,19 +52,23 @@ class MariaDbStorage:
                 **record,
             }
             cur.execute(
-                "INSERT INTO abstracts (id, gf_entry_id, data) VALUES (%s, %s, %s)",
-                (new_id, gf_id, json.dumps(new_record, default=str)),
+                "INSERT INTO abstracts (gf_entry_id, data) VALUES (%s, %s)",
+                (gf_id, json.dumps(new_record, default=str)),
+            )
+            new_record["id"] = cur.lastrowid
+            cur.execute(
+                "UPDATE abstracts SET data = %s WHERE id = %s",
+                (json.dumps(new_record, default=str), new_record["id"]),
             )
             return new_record
 
     def update(self, abstract_id: int, fields: dict[str, Any]) -> dict[str, Any] | None:
-        with cursor() as cur:
-            cur.execute("SELECT data FROM abstracts WHERE id = %s", (abstract_id,))
+        with transaction() as cur:
+            cur.execute("SELECT data FROM abstracts WHERE id = %s FOR UPDATE", (abstract_id,))
             row = cur.fetchone()
             if not row:
                 return None
-            existing = json.loads(row["data"])
-            updated = {**existing, **fields, "updated_at": datetime.utcnow().isoformat()}
+            updated = {**json.loads(row["data"]), **fields, "updated_at": datetime.utcnow().isoformat()}
             cur.execute(
                 "UPDATE abstracts SET data = %s WHERE id = %s",
                 (json.dumps(updated, default=str), abstract_id),
@@ -89,11 +82,7 @@ class MariaDbJobStorage:
     def create_job(self, abstract_id: int, institutions: list[dict], year_from: int, year_to: int | None) -> dict[str, Any]:
         now = datetime.utcnow().isoformat()
         with cursor() as cur:
-            cur.execute("SELECT MAX(id) AS max_id FROM jobs")
-            row = cur.fetchone()
-            new_id = (row["max_id"] or 0) + 1
             job = {
-                "id": new_id,
                 "abstract_id": abstract_id,
                 "institutions": institutions,
                 "year_from": year_from,
@@ -105,9 +94,11 @@ class MariaDbJobStorage:
                 "created_at": now,
                 "completed_at": None,
             }
+            cur.execute("INSERT INTO jobs (data) VALUES (%s)", (json.dumps(job, default=str),))
+            job["id"] = cur.lastrowid
             cur.execute(
-                "INSERT INTO jobs (id, data) VALUES (%s, %s)",
-                (new_id, json.dumps(job, default=str)),
+                "UPDATE jobs SET data = %s WHERE id = %s",
+                (json.dumps(job, default=str), job["id"]),
             )
             return job
 
@@ -118,8 +109,8 @@ class MariaDbJobStorage:
             return json.loads(row["data"]) if row else None
 
     def update_job(self, job_id: int, fields: dict[str, Any]) -> None:
-        with cursor() as cur:
-            cur.execute("SELECT data FROM jobs WHERE id = %s", (job_id,))
+        with transaction() as cur:
+            cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
             row = cur.fetchone()
             if not row:
                 return
@@ -136,8 +127,8 @@ class MariaDbJobStorage:
             return [json.loads(row["data"]) for row in cur.fetchall()]
 
     def append_results(self, job_id: int, institution: str, new_results: list[dict]) -> None:
-        with cursor() as cur:
-            cur.execute("SELECT data FROM jobs WHERE id = %s", (job_id,))
+        with transaction() as cur:
+            cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
             row = cur.fetchone()
             if not row:
                 return
@@ -150,8 +141,8 @@ class MariaDbJobStorage:
             )
 
     def append_log(self, job_id: int, institution: str, messages: list[str]) -> None:
-        with cursor() as cur:
-            cur.execute("SELECT data FROM jobs WHERE id = %s", (job_id,))
+        with transaction() as cur:
+            cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
             row = cur.fetchone()
             if not row:
                 return
