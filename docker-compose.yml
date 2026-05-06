@@ -2,8 +2,6 @@ services:
   db:
     container_name: peerlinkdb
     image: mariadb
-    env_file:
-      - .env
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=peerlink
@@ -28,8 +26,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    env_file:
-      - .env
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GRAVITY_FORMS_API_CONSUMER_KEY=${GRAVITY_FORMS_API_CONSUMER_KEY}
