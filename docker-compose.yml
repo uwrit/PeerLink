@@ -9,7 +9,7 @@ services:
       - MARIADB_PASSWORD=peerlink
     volumes:
       - db_data:/var/lib/mysql
-      - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:z
     ports:
       - "3307:3306"
     restart: unless-stopped
