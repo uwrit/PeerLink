@@ -1,0 +1,18 @@
+name: Peerlink Container Refresh
+
+on:
+  push:
+    branches:
+      - "dashboard-dev"
+  workflow_dispatch:
+
+
+jobs:
+
+  build:
+    runs-on: self-hosted
+    steps:   
+      - name: Check out the repository to the runner
+        uses: actions/checkout@v6
+      - name: docker build
+        run: docker compose build
