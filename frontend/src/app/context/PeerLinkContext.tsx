@@ -47,6 +47,7 @@ interface PeerLinkContextType {
   loading: boolean
   reload: () => Promise<void>
   submitForReview: (abstractId: number, payload: MatchPayload) => Promise<number>
+  submitBatch: (abstractIds: number[], payload: MatchPayload) => Promise<void>
   updateAbstract: (id: number, updates: Partial<Abstract>) => Promise<void>
   syncGravityForms: () => Promise<{ synced: number }>
 }
@@ -155,7 +156,8 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
   }, [liveMatchEntries.length, reload])
 
   const submitForReview = useCallback(async (abstractId: number, payload: MatchPayload): Promise<number> => {
-    const { job_id } = await api.startMatching({ abstract_id: abstractId, ...payload })
+    const { job_ids } = await api.startMatching({ abstract_ids: [abstractId], ...payload })
+    const job_id = job_ids[0]
     setAbstracts((prev) =>
       prev.map((a) => (a.id === abstractId ? { ...a, matchStatus: 'processing' } : a))
     )
@@ -175,6 +177,11 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
     return job_id
   }, [abstracts])
 
+  const submitBatch = useCallback(async (abstractIds: number[], payload: MatchPayload): Promise<void> => {
+    await api.startMatching({ abstract_ids: abstractIds, ...payload })
+    await reload()
+  }, [reload])
+
   const updateAbstract = useCallback(async (id: number, updates: Partial<Abstract>) => {
     const apiUpdates: Record<string, unknown> = {}
     if (updates.invitationSent !== undefined) apiUpdates.invitation_sent = updates.invitationSent
@@ -193,7 +200,7 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
   return (
     <PeerLinkContext.Provider value={{
       abstracts, liveMatchEntries,
-      loading, reload, submitForReview, updateAbstract,
+      loading, reload, submitForReview, submitBatch, updateAbstract,
       syncGravityForms,
     }}>
       {children}

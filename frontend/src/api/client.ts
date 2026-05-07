@@ -24,7 +24,7 @@ export const api = {
     request<Abstract>(`/abstracts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
   startMatching: (body: MatchRequest) =>
-    request<{ job_id: number; status: string }>('/matching/start', {
+    request<{ job_ids: number[]; status: string }>('/matching/start', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -66,7 +66,7 @@ export interface Abstract {
 }
 
 export interface MatchRequest {
-  abstract_id: number
+  abstract_ids: number[]
   institutions: { name: string; count: number }[]
   year_from: number
   year_to?: number
