@@ -32,6 +32,16 @@ export const api = {
   getMatchJobs: () =>
     request<MatchJob[]>('/matching/jobs'),
 
+  updateReviewerStatus: (
+    jobId: number,
+    reviewerIndex: number,
+    body: { invitation_sent?: boolean; accepted_invite?: boolean },
+  ) =>
+    request<MatchJob>(`/matching/jobs/${jobId}/reviewers/${reviewerIndex}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
   syncGravityForms: () =>
     request<{ synced: number }>('/sync/gravity-forms', { method: 'POST' }),
 }
@@ -88,4 +98,6 @@ export interface ReviewerResult {
   justification?: string
   raw?: string
   parse_error?: string
+  invitation_sent?: boolean
+  accepted_invite?: boolean
 }

@@ -152,3 +152,32 @@ class MariaDbJobStorage:
                 "UPDATE jobs SET data = %s WHERE id = %s",
                 (json.dumps(job, default=str), job_id),
             )
+
+    def update_reviewer(
+        self,
+        job_id: int,
+        reviewer_index: int,
+        fields: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        with transaction() as cur:
+            cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            job = json.loads(row["data"])
+            results = job.get("results") or []
+            if reviewer_index < 0 or reviewer_index >= len(results):
+                return None
+            results[reviewer_index] = {**results[reviewer_index], **fields}
+            job["results"] = results
+            cur.execute(
+                "UPDATE jobs SET data = %s WHERE id = %s",
+                (json.dumps(job, default=str), job_id),
+            )
+            return job
+
+    def list_jobs_for_abstract(self, abstract_id: int) -> list[dict[str, Any]]:
+        with cursor() as cur:
+            cur.execute("SELECT data FROM jobs ORDER BY id")
+            jobs = [json.loads(row["data"]) for row in cur.fetchall()]
+            return [j for j in jobs if j.get("abstract_id") == abstract_id]

@@ -53,12 +53,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b border-[rgba(0,0,0,0.1)] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-[#203E84]" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>
-              PeerLink
-            </span>
-            <div className="border-l border-gray-200 pl-4">
-              <img src={ithsLogo} alt="Institute of Translational Health Sciences" className="h-8 w-auto" />
-            </div>
+            <img src={ithsLogo} alt="Institute of Translational Health Sciences" className="h-8 w-auto" />
           </div>
 
           <div className="flex items-center gap-3">

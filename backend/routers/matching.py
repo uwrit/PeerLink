@@ -23,6 +23,29 @@ class MatchRequest(BaseModel):
     year_to: int | None = Field(default=None, ge=1900)
 
 
+class ReviewerStatusPatch(BaseModel):
+    invitation_sent: bool | None = None
+    accepted_invite: bool | None = None
+
+
+def _recompute_abstract_status(storage: Storage, abstract_id: int) -> None:
+    abstract = storage.get_by_id(abstract_id)
+    if not abstract:
+        return
+    current = abstract.get("status")
+    if current in ("unmatched", "processing"):
+        return
+    jobs = job_storage.list_jobs_for_abstract(abstract_id)
+    any_accepted = any(
+        r.get("accepted_invite")
+        for job in jobs
+        for r in (job.get("results") or [])
+    )
+    new_status = "matched" if any_accepted else "in-progress"
+    if new_status != current:
+        storage.update(abstract_id, {"status": new_status})
+
+
 @router.post("/start")
 async def start_matching(
     body: MatchRequest,
@@ -72,7 +95,7 @@ async def start_matching(
             year_from=body.year_from,
             year_to=body.year_to,
         )
-        storage.update(body.abstract_id, {"status": "matched"})
+        storage.update(body.abstract_id, {"status": "in-progress"})
 
     background_tasks.add_task(run)
     return {"job_id": job_id, "status": "pending"}
@@ -81,3 +104,20 @@ async def start_matching(
 @router.get("/jobs")
 def list_jobs() -> list[dict[str, Any]]:
     return job_storage.list_jobs()
+
+
+@router.patch("/jobs/{job_id}/reviewers/{reviewer_index}")
+def patch_reviewer(
+    job_id: int,
+    reviewer_index: int,
+    body: ReviewerStatusPatch,
+    storage: Storage = Depends(get_storage),
+) -> dict[str, Any]:
+    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    job = job_storage.update_reviewer(job_id, reviewer_index, fields)
+    if not job:
+        raise HTTPException(status_code=404, detail="Reviewer not found")
+    _recompute_abstract_status(storage, job["abstract_id"])
+    return job

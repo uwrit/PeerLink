@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronDown, ChevronRight, Loader2, Clock,
   User, CalendarDays, Building2, BookOpen, ExternalLink, X,
+  Mail, CheckCircle2, Send,
 } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { usePeerLink, PROGRAMS } from '../context/PeerLinkContext'
 import { api, MatchJob } from '../../api/client'
+import { buildReviewerMailto } from '../utils/reviewerEmail'
 
 interface JustificationModal {
   reviewerName: string
@@ -175,7 +177,7 @@ function formatTime(date: Date): string {
 }
 
 export function MatchHistoryPage() {
-  const { liveMatchEntries, abstracts } = usePeerLink()
+  const { liveMatchEntries, abstracts, reload } = usePeerLink()
   const [selectedProgram, setSelectedProgram] = useState('All Programs')
   const [expandedJobs, setExpandedJobs] = useState<number[]>([])
   const [expandedLive, setExpandedLive] = useState<string[]>([])
@@ -187,6 +189,25 @@ export function MatchHistoryPage() {
   const closeLogModal = useCallback(() => setActiveLogJob(null), [])
   const [selectedYear, setSelectedYear] = useState('All Years')
   const [yearDefaultSet, setYearDefaultSet] = useState(false)
+  const [pendingReviewer, setPendingReviewer] = useState<string | null>(null)
+
+  const updateReviewer = useCallback(async (
+    jobId: number,
+    reviewerIndex: number,
+    fields: { invitation_sent?: boolean; accepted_invite?: boolean },
+  ) => {
+    const key = `${jobId}:${reviewerIndex}`
+    setPendingReviewer(key)
+    try {
+      const updatedJob = await api.updateReviewerStatus(jobId, reviewerIndex, fields)
+      setPastJobs((prev) => prev.map((j) => (j.id === updatedJob.id ? updatedJob : j)))
+      await reload()
+    } catch (e) {
+      console.error('Failed to update reviewer status', e)
+    } finally {
+      setPendingReviewer(null)
+    }
+  }, [reload])
 
   const programOptions = ['All Programs', ...PROGRAMS]
 
@@ -351,7 +372,8 @@ export function MatchHistoryPage() {
                 const abstract = abstracts.find((a) => a.id === job.abstract_id)
                 const isExpanded = expandedJobs.includes(job.id)
 
-                const reviewers = (job.results ?? []).filter((r) => r.reviewer_name)
+                const indexedResults = (job.results ?? []).map((r, idx) => ({ ...r, _idx: idx }))
+                const reviewers = indexedResults.filter((r) => r.reviewer_name)
 
                 // Group reviewers by institution
                 const byInstitution = reviewers.reduce<Record<string, typeof reviewers>>(
@@ -457,15 +479,42 @@ export function MatchHistoryPage() {
                                   <span className="text-xs text-gray-400">({instReviewers.length})</span>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                  {instReviewers.map((r, i) => (
+                                  {instReviewers.map((r) => {
+                                    const reviewerIdx = r._idx
+                                    const pendingKey = `${job.id}:${reviewerIdx}`
+                                    const isPending = pendingReviewer === pendingKey
+                                    const accepted = !!r.accepted_invite
+                                    const invited = !!r.invitation_sent
+                                    return (
                                     <div
-                                      key={i}
-                                      className="flex flex-col bg-white border border-[#849B6F]/40 rounded-lg px-3 py-2.5 shadow-sm min-w-[220px] max-w-[340px]"
+                                      key={reviewerIdx}
+                                      className={`flex flex-col bg-white border rounded-lg px-3 py-2.5 shadow-sm min-w-[240px] max-w-[340px] ${
+                                        accepted
+                                          ? 'border-[#849B6F] ring-1 ring-[#849B6F]/30'
+                                          : 'border-[#849B6F]/40'
+                                      }`}
                                     >
-                                      {/* Name */}
-                                      <div className="flex items-center gap-1.5 mb-1">
-                                        <User className="w-3 h-3 text-[#849B6F] flex-shrink-0" />
-                                        <span className="text-sm font-semibold text-gray-800">{r.reviewer_name}</span>
+                                      {/* Name + status pill */}
+                                      <div className="flex items-center justify-between gap-2 mb-1">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <User className="w-3 h-3 text-[#849B6F] flex-shrink-0" />
+                                          <span className="text-sm font-semibold text-gray-800 truncate">{r.reviewer_name}</span>
+                                        </div>
+                                        {accepted ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#4a6741] bg-[#E8F0DD] border border-[#849B6F]/40 rounded-full px-2 py-0.5 flex-shrink-0">
+                                            <CheckCircle2 className="w-2.5 h-2.5" />
+                                            Accepted
+                                          </span>
+                                        ) : invited ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 flex-shrink-0">
+                                            <Mail className="w-2.5 h-2.5" />
+                                            Invited
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 flex-shrink-0">
+                                            Pending
+                                          </span>
+                                        )}
                                       </div>
                                       {/* Justification preview + Read more */}
                                       {r.justification && (
@@ -490,8 +539,52 @@ export function MatchHistoryPage() {
                                           </button>
                                         </div>
                                       )}
+                                      {/* Invite controls */}
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={invited}
+                                            disabled={isPending}
+                                            onChange={(e) => updateReviewer(job.id, reviewerIdx, { invitation_sent: e.target.checked })}
+                                            className="w-3.5 h-3.5 accent-[#849B6F] cursor-pointer"
+                                          />
+                                          Sent Invite
+                                        </label>
+                                        <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={accepted}
+                                            disabled={isPending}
+                                            onChange={(e) => updateReviewer(job.id, reviewerIdx, { accepted_invite: e.target.checked })}
+                                            className="w-3.5 h-3.5 accent-[#849B6F] cursor-pointer"
+                                          />
+                                          Accepted Invite
+                                        </label>
+                                        {isPending && <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />}
+                                      </div>
                                       {/* Profile links */}
                                       <div className="flex items-center gap-3 mt-auto pt-1 border-t border-gray-100">
+                                        {(() => {
+                                          const mailto = abstract
+                                            ? buildReviewerMailto(abstract.program, {
+                                                reviewerName: r.reviewer_name,
+                                                applicantName: abstract.applicantName,
+                                                projectTitle: abstract.title,
+                                              })
+                                            : null
+                                          return mailto ? (
+                                            <a
+                                              href={mailto}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="flex items-center gap-0.5 text-xs text-[#203E84] hover:text-[#152a5c] hover:underline font-medium"
+                                              title="Compose invitation email"
+                                            >
+                                              <Send className="w-2.5 h-2.5" />
+                                              Send Email
+                                            </a>
+                                          ) : null
+                                        })()}
                                         {r.orcid && (
                                           <a
                                             href={`https://orcid.org/${r.orcid}`}
@@ -518,7 +611,7 @@ export function MatchHistoryPage() {
                                         )}
                                       </div>
                                     </div>
-                                  ))}
+                                  )})}
                                 </div>
                               </div>
                             ))}

@@ -24,10 +24,9 @@ class GravityFormsClient:
     async def get_all_entries(
         self,
         form_id: int = FORM_ID,
-        page_size: int = 5,
+        page_size: int = 10,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
-        """Fetch the most recent entries for the form (single request, no pagination)."""
         url = (
             f"{GF_BASE}/forms/{form_id}/entries"
             f"?paging[page_size]={page_size}"
@@ -128,7 +127,7 @@ def parse_entry(entry: dict[str, Any]) -> dict[str, Any]:
     Map raw GF field values to a clean dict used by the pipeline.
     """
     def _name(*parts: str) -> str:
-        return " ".join(p.strip() for p in parts if p.strip() and p.lower() not in ("", "na", "off"))
+        return " ".join(p.strip() for p in parts if p.strip())
 
     applicant_name = _name(
         entry.get("96.3", ""),
