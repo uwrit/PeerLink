@@ -462,13 +462,10 @@ export function MatchHistoryPage() {
                                       key={i}
                                       className="flex flex-col bg-white border border-[#849B6F]/40 rounded-lg px-3 py-2.5 shadow-sm min-w-[220px] max-w-[340px]"
                                     >
-                                      {/* Name + h-index */}
+                                      {/* Name */}
                                       <div className="flex items-center gap-1.5 mb-1">
                                         <User className="w-3 h-3 text-[#849B6F] flex-shrink-0" />
                                         <span className="text-sm font-semibold text-gray-800">{r.reviewer_name}</span>
-                                        {r.h_index != null && (
-                                          <span className="text-xs text-gray-400 ml-auto pl-2 flex-shrink-0">h{r.h_index}</span>
-                                        )}
                                       </div>
                                       {/* Justification preview + Read more */}
                                       {r.justification && (

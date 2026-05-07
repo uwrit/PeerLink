@@ -61,4 +61,3 @@ networks:
 
 volumes:
   db_data:
-  abstract_data:

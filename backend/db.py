@@ -22,11 +22,11 @@ def _parse_url(url: str) -> dict:
 _conn_kwargs = _parse_url(settings.database_url)
 
 
-def get_connection() -> pymysql.connections.Connection:
+def get_connection(autocommit: bool = True) -> pymysql.connections.Connection:
     return pymysql.connect(
         **_conn_kwargs,
         cursorclass=pymysql.cursors.DictCursor,
-        autocommit=True,
+        autocommit=autocommit,
         charset="utf8mb4",
     )
 
@@ -37,5 +37,19 @@ def cursor() -> Generator[pymysql.cursors.DictCursor, None, None]:
     try:
         with conn.cursor() as cur:
             yield cur
+    finally:
+        conn.close()
+
+
+@contextmanager
+def transaction() -> Generator[pymysql.cursors.DictCursor, None, None]:
+    conn = get_connection(autocommit=False)
+    try:
+        with conn.cursor() as cur:
+            yield cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
