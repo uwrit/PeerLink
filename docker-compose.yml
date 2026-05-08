@@ -34,8 +34,6 @@ services:
       - STORAGE_BACKEND=${STORAGE_BACKEND}
     ports:
       - "8000:8000"
-    volumes:
-      - abstract_data:/app/data
     restart: unless-stopped
     depends_on:
       db:
@@ -61,4 +59,3 @@ networks:
 
 volumes:
   db_data:
-  abstract_data:
