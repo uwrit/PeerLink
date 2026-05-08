@@ -33,6 +33,10 @@ def append_log(job_id: int, institution: str, messages: list[str]) -> None:
     return _backend().append_log(job_id, institution, messages)
 
 
+def set_institution_progress(job_id: int, institution: str, status: str) -> None:
+    return _backend().set_institution_progress(job_id, institution, status)
+
+
 def update_reviewer(job_id: int, reviewer_index: int, fields: dict[str, Any]) -> dict[str, Any] | None:
     return _backend().update_reviewer(job_id, reviewer_index, fields)
 
