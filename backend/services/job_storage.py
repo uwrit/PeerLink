@@ -31,3 +31,11 @@ def append_results(job_id: int, institution: str, new_results: list[dict[str, An
 
 def append_log(job_id: int, institution: str, messages: list[str]) -> None:
     return _backend().append_log(job_id, institution, messages)
+
+
+def update_reviewer(job_id: int, reviewer_index: int, fields: dict[str, Any]) -> dict[str, Any] | None:
+    return _backend().update_reviewer(job_id, reviewer_index, fields)
+
+
+def list_jobs_for_abstract(abstract_id: int) -> list[dict[str, Any]]:
+    return _backend().list_jobs_for_abstract(abstract_id)
