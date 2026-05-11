@@ -126,6 +126,12 @@ class MariaDbJobStorage:
             cur.execute("SELECT data FROM jobs ORDER BY id")
             return [json.loads(row["data"]) for row in cur.fetchall()]
 
+    def list_jobs_for_abstract(self, abstract_id: int) -> list[dict[str, Any]]:
+        with cursor() as cur:
+            cur.execute("SELECT data FROM jobs ORDER BY id")
+            jobs = [json.loads(row["data"]) for row in cur.fetchall()]
+            return [j for j in jobs if j.get("abstract_id") == abstract_id]
+
     def append_results(self, job_id: int, institution: str, new_results: list[dict]) -> None:
         with transaction() as cur:
             cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
@@ -153,6 +159,19 @@ class MariaDbJobStorage:
                 (json.dumps(job, default=str), job_id),
             )
 
+    def set_institution_progress(self, job_id: int, institution: str, status: str) -> None:
+        with transaction() as cur:
+            cur.execute("SELECT data FROM jobs WHERE id = %s FOR UPDATE", (job_id,))
+            row = cur.fetchone()
+            if not row:
+                return
+            job = json.loads(row["data"])
+            job.setdefault("progress", {})[institution] = status
+            cur.execute(
+                "UPDATE jobs SET data = %s WHERE id = %s",
+                (json.dumps(job, default=str), job_id),
+            )
+
     def update_reviewer(
         self,
         job_id: int,
@@ -175,9 +194,3 @@ class MariaDbJobStorage:
                 (json.dumps(job, default=str), job_id),
             )
             return job
-
-    def list_jobs_for_abstract(self, abstract_id: int) -> list[dict[str, Any]]:
-        with cursor() as cur:
-            cur.execute("SELECT data FROM jobs ORDER BY id")
-            jobs = [json.loads(row["data"]) for row in cur.fetchall()]
-            return [j for j in jobs if j.get("abstract_id") == abstract_id]

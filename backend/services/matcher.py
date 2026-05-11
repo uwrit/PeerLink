@@ -53,12 +53,7 @@ async def _run_one(
     year_to: int | None,
 ) -> None:
     async with _SEMAPHORE:
-        job_storage.update_job(job_id, {
-            "progress": {
-                **job_storage.get_job(job_id)["progress"],
-                institution: "running",
-            }
-        })
+        job_storage.set_institution_progress(job_id, institution, "running")
         log_messages: list[str] = []
 
         def _on_progress(msg: str) -> None:
@@ -80,12 +75,7 @@ async def _run_one(
         except Exception as exc:
             logger.error("Matching failed for institution %s: %s", institution, exc)
             job_storage.append_log(job_id, institution, log_messages)
-            job_storage.update_job(job_id, {
-                "progress": {
-                    **job_storage.get_job(job_id)["progress"],
-                    institution: "error",
-                }
-            })
+            job_storage.set_institution_progress(job_id, institution, "error")
 
 
 async def run_matching_job(
