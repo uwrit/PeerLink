@@ -53,9 +53,12 @@ services:
       - backend
     networks:
       - peerlink
+      - web-containers
 
 networks:
   peerlink:
+  web-containers:
+    external: true
 
 volumes:
   db_data:
