@@ -29,6 +29,7 @@ class MatchRequest(BaseModel):
 class ReviewerStatusPatch(BaseModel):
     invitation_sent: bool | None = None
     accepted_invite: bool | None = None
+    declined_invite: bool | None = None
 
 
 def _recompute_abstract_status(storage: Storage, abstract_id: int) -> None:
@@ -153,6 +154,10 @@ def patch_reviewer(
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     if not fields:
         raise HTTPException(status_code=400, detail="No fields to update")
+    if fields.get("accepted_invite") is True:
+        fields["declined_invite"] = False
+    if fields.get("declined_invite") is True:
+        fields["accepted_invite"] = False
     job = job_storage.update_reviewer(job_id, reviewer_index, fields)
     if not job:
         raise HTTPException(status_code=404, detail="Reviewer not found")

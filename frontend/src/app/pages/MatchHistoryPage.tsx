@@ -2,12 +2,19 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronDown, ChevronRight, Loader2, Clock,
   User, CalendarDays, Building2, BookOpen, ExternalLink, X,
-  Mail, CheckCircle2, Send,
+  Mail, CheckCircle2, XCircle, Send, FileText,
 } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
-import { usePeerLink, PROGRAMS } from '../context/PeerLinkContext'
+import { usePeerLink, PROGRAMS, type MatchStatus } from '../context/PeerLinkContext'
 import { api, MatchJob } from '../../api/client'
 import { buildReviewerMailto } from '../utils/reviewerEmail'
+
+const statusConfig: Record<MatchStatus, { label: string; color: string; dot: string }> = {
+  unmatched: { label: 'Unmatched', color: 'text-red-600 bg-red-50 border-red-200', dot: 'bg-red-400' },
+  processing: { label: 'Processing', color: 'text-blue-600 bg-blue-50 border-blue-200', dot: 'bg-blue-400' },
+  'in-progress': { label: 'In Progress', color: 'text-amber-600 bg-amber-50 border-amber-200', dot: 'bg-amber-400' },
+  matched: { label: 'Matched', color: 'text-[#849B6F] bg-[#E8F0DD] border-[#849B6F]/30', dot: 'bg-[#849B6F]' },
+}
 
 interface JustificationModal {
   reviewerName: string
@@ -189,12 +196,13 @@ export function MatchHistoryPage() {
   const closeLogModal = useCallback(() => setActiveLogJob(null), [])
   const [selectedYear, setSelectedYear] = useState('All Years')
   const [yearDefaultSet, setYearDefaultSet] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState<'All Statuses' | MatchStatus>('All Statuses')
   const [pendingReviewer, setPendingReviewer] = useState<string | null>(null)
 
   const updateReviewer = useCallback(async (
     jobId: number,
     reviewerIndex: number,
-    fields: { invitation_sent?: boolean; accepted_invite?: boolean },
+    fields: { invitation_sent?: boolean; accepted_invite?: boolean; declined_invite?: boolean },
   ) => {
     const key = `${jobId}:${reviewerIndex}`
     setPendingReviewer(key)
@@ -228,9 +236,11 @@ export function MatchHistoryPage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
 
-  const filteredLiveEntries = liveMatchEntries.filter(
-    (e) => selectedProgram === 'All Programs' || e.programs.includes(selectedProgram)
-  )
+  const filteredLiveEntries = liveMatchEntries.filter((e) => {
+    if (selectedProgram !== 'All Programs' && !e.programs.includes(selectedProgram)) return false
+    if (selectedStatus !== 'All Statuses' && e.status !== selectedStatus) return false
+    return true
+  })
 
   const yearOptions = ['All Years', ...Array.from(new Set(
     pastJobs.map((j) => {
@@ -253,8 +263,15 @@ export function MatchHistoryPage() {
       const submittedYear = abstract?.submitted ? new Date(abstract.submitted).getFullYear().toString() : null
       if (submittedYear !== selectedYear) return false
     }
+    if (selectedStatus !== 'All Statuses' && abstract?.matchStatus !== selectedStatus) return false
     return true
   })
+
+  const statusOptions: Array<'All Statuses' | MatchStatus> = [
+    'All Statuses', 'unmatched', 'processing', 'in-progress', 'matched',
+  ]
+  const statusLabel = (s: 'All Statuses' | MatchStatus) =>
+    s === 'All Statuses' ? 'All Statuses' : statusConfig[s].label
 
   return (
     <div className="p-6 min-h-full" style={{ backgroundColor: '#E8F0DD30' }}>
@@ -275,6 +292,16 @@ export function MatchHistoryPage() {
                 className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] text-gray-700 shadow-sm"
               >
                 {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Status:</label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as 'All Statuses' | MatchStatus)}
+                className="text-sm border-2 border-[#849B6F] rounded-lg px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#849B6F] text-gray-700 shadow-sm"
+              >
+                {statusOptions.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-2">
@@ -408,9 +435,25 @@ export function MatchHistoryPage() {
 
                       {/* Abstract info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-[#203E84] text-base leading-snug mb-1 pr-4">
-                          {abstract?.title ?? `Abstract #${job.abstract_id}`}
-                        </p>
+                        <div className="flex items-start justify-between gap-2 mb-1 pr-4">
+                          <p className="font-semibold text-[#203E84] text-base leading-snug">
+                            {abstract?.title ?? `Abstract #${job.abstract_id}`}
+                          </p>
+                          {abstract && (() => {
+                            const status = statusConfig[abstract.matchStatus]
+                            const isProcessingStatus = abstract.matchStatus === 'processing'
+                            return (
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium flex-shrink-0 ${status.color}`}>
+                                {isProcessingStatus ? (
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin flex-shrink-0" />
+                                ) : (
+                                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status.dot}`} />
+                                )}
+                                {status.label}
+                              </span>
+                            )
+                          })()}
+                        </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                           {abstract?.applicantName && (
                             <span className="flex items-center gap-1">
@@ -456,8 +499,9 @@ export function MatchHistoryPage() {
                               e.stopPropagation()
                               setActiveLogJob({ jobId: job.id, logs: job.logs! })
                             }}
-                            className="text-xs text-[#203E84] hover:underline font-medium"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#203E84] bg-white border border-[#203E84]/30 rounded-lg px-3 py-1.5 hover:bg-[#203E84] hover:text-white hover:border-[#203E84] transition-colors shadow-sm"
                           >
+                            <FileText className="w-3 h-3" />
                             View Logs
                           </button>
                         )}
@@ -484,6 +528,7 @@ export function MatchHistoryPage() {
                                     const pendingKey = `${job.id}:${reviewerIdx}`
                                     const isPending = pendingReviewer === pendingKey
                                     const accepted = !!r.accepted_invite
+                                    const declined = !!r.declined_invite
                                     const invited = !!r.invitation_sent
                                     return (
                                     <div
@@ -491,7 +536,9 @@ export function MatchHistoryPage() {
                                       className={`flex flex-col bg-white border rounded-lg px-3 py-2.5 shadow-sm min-w-[240px] max-w-[340px] ${
                                         accepted
                                           ? 'border-[#849B6F] ring-1 ring-[#849B6F]/30'
-                                          : 'border-[#849B6F]/40'
+                                          : declined
+                                            ? 'border-red-300 ring-1 ring-red-200'
+                                            : 'border-[#849B6F]/40'
                                       }`}
                                     >
                                       {/* Name + status pill */}
@@ -504,6 +551,11 @@ export function MatchHistoryPage() {
                                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-[#4a6741] bg-[#E8F0DD] border border-[#849B6F]/40 rounded-full px-2 py-0.5 flex-shrink-0">
                                             <CheckCircle2 className="w-2.5 h-2.5" />
                                             Accepted
+                                          </span>
+                                        ) : declined ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 flex-shrink-0">
+                                            <XCircle className="w-2.5 h-2.5" />
+                                            Declined
                                           </span>
                                         ) : invited ? (
                                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 flex-shrink-0">
@@ -540,7 +592,7 @@ export function MatchHistoryPage() {
                                         </div>
                                       )}
                                       {/* Invite controls */}
-                                      <div className="flex items-center gap-2 mb-2">
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2">
                                         <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
                                           <input
                                             type="checkbox"
@@ -559,7 +611,17 @@ export function MatchHistoryPage() {
                                             onChange={(e) => updateReviewer(job.id, reviewerIdx, { accepted_invite: e.target.checked })}
                                             className="w-3.5 h-3.5 accent-[#849B6F] cursor-pointer"
                                           />
-                                          Accepted Invite
+                                          Accepted
+                                        </label>
+                                        <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={declined}
+                                            disabled={isPending}
+                                            onChange={(e) => updateReviewer(job.id, reviewerIdx, { declined_invite: e.target.checked })}
+                                            className="w-3.5 h-3.5 accent-red-500 cursor-pointer"
+                                          />
+                                          Declined
                                         </label>
                                         {isPending && <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />}
                                       </div>
