@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Sparkles, Loader2, User, Building2, ExternalLink,
-  AlertCircle, ChevronDown, Plus, Minus, X,
+  Sparkles, Search, Loader2, User, Building2, ExternalLink,
+  AlertCircle, Trash2, ChevronDown, Plus, Minus, X,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
 import { api, ReviewerResult } from '../../api/client'
 import { INSTITUTIONS } from '../context/PeerLinkContext'
 
@@ -31,8 +30,7 @@ export function QuickMatchPage() {
   const [yearTo, setYearTo] = useState(currentYear)
 
   const [running, setRunning] = useState(false)
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [reviewers, setReviewers] = useState<ReviewerResult[]>([])
   const [lastRunAt, setLastRunAt] = useState<string | null>(null)
 
@@ -81,14 +79,11 @@ export function QuickMatchPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitError(null)
+    setError(null)
 
-    const errors: Record<string, string> = {}
-    if (!abstractText.trim()) errors.abstract = 'Please enter an abstract.'
-    if (selectedInstitutions.length === 0) errors.institutions = 'Please select at least one institution.'
-    if (yearFrom > yearTo) errors.years = 'Start year cannot be after end year.'
-    setFormErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    if (!abstractText.trim()) return setError('Please enter an abstract.')
+    if (selectedInstitutions.length === 0) return setError('Please select at least one institution.')
+    if (yearFrom > yearTo) return setError('Start year cannot be after end year.')
 
     setRunning(true)
     setReviewers([])
@@ -118,7 +113,7 @@ export function QuickMatchPage() {
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Match failed. Please try again.')
+      setError(err instanceof Error ? err.message : 'Match failed. Please try again.')
     } finally {
       setRunning(false)
     }
@@ -133,8 +128,7 @@ export function QuickMatchPage() {
     setYearTo(currentYear)
     setReviewers([])
     setLastRunAt(null)
-    setFormErrors({})
-    setSubmitError(null)
+    setError(null)
   }
 
   // Group reviewers by institution for results display
@@ -173,7 +167,7 @@ export function QuickMatchPage() {
 
           <div className="space-y-5">
             <div>
-              <label htmlFor="abstractText" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="abstractText" className="block text-sm font-medium text-gray-700 mb-1">
                 Abstract <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -182,13 +176,8 @@ export function QuickMatchPage() {
                 value={abstractText}
                 onChange={(e) => setAbstractText(e.target.value)}
                 placeholder="Enter your abstract..."
-                className={`w-full border rounded-lg px-3 py-2 bg-gray-50 outline-none focus:ring-2 focus:ring-[#849B6F]/40 focus:border-[#849B6F] resize-y ${formErrors.abstract ? 'border-red-400' : 'border-gray-200'}`}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white hover:border-[#849B6F] focus:outline-none focus:ring-2 focus:ring-[#849B6F] focus:border-transparent resize-y"
               />
-              {formErrors.abstract && (
-                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {formErrors.abstract}
-                </p>
-              )}
             </div>
 
             {/* Institution Multi-Select */}
@@ -200,7 +189,7 @@ export function QuickMatchPage() {
                 <button
                   type="button"
                   onClick={() => setInstitutionDropdownOpen((o) => !o)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg outline-none hover:bg-[#E8F0DD]/40 focus:ring-2 focus:ring-[#849B6F]/40 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg outline-none hover:border-[#849B6F] focus:ring-2 focus:ring-[#849B6F]/40 transition-colors"
                 >
                   <span className={selectedInstitutions.length === 0 ? 'text-gray-400' : 'text-gray-700'}>
                     {selectedInstitutions.length === 0
@@ -275,68 +264,60 @@ export function QuickMatchPage() {
                   ))}
                 </div>
               )}
-              {formErrors.institutions && (
-                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {formErrors.institutions}
-                </p>
-              )}
             </div>
 
-            {/* Year Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Year Range <span className="text-red-500">*</span>
-              </label>
-              <p className="text-xs text-gray-400 mb-2">Specify the range of years for the reviewers' experience.</p>
-              <div className="flex items-center gap-2">
-                <Input
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="yearFrom" className="block text-sm font-medium text-gray-700 mb-1">From Year</label>
+                <input
+                  id="yearFrom"
                   type="number"
+                  min={1900}
+                  max={currentYear + 5}
                   value={yearFrom}
-                  onChange={(e) => setYearFrom(Number(e.target.value))}
-                  placeholder="Start Year"
-                  className={`bg-gray-50 ${formErrors.years ? 'border-red-400' : 'border-gray-200'}`}
-                />
-                <span className="text-gray-500">to</span>
-                <Input
-                  type="number"
-                  value={yearTo}
-                  onChange={(e) => setYearTo(Number(e.target.value))}
-                  placeholder="End Year"
-                  className={`bg-gray-50 ${formErrors.years ? 'border-red-400' : 'border-gray-200'}`}
+                  onChange={(e) => setYearFrom(parseInt(e.target.value) || 0)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white hover:border-[#849B6F] focus:outline-none focus:ring-2 focus:ring-[#849B6F] focus:border-transparent"
                 />
               </div>
-              {formErrors.years && (
-                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {formErrors.years}
-                </p>
-              )}
+              <div>
+                <label htmlFor="yearTo" className="block text-sm font-medium text-gray-700 mb-1">End Year</label>
+                <input
+                  id="yearTo"
+                  type="number"
+                  min={1900}
+                  max={currentYear + 5}
+                  value={yearTo}
+                  onChange={(e) => setYearTo(parseInt(e.target.value) || 0)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white hover:border-[#849B6F] focus:outline-none focus:ring-2 focus:ring-[#849B6F] focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
 
-          {submitError && (
+          {error && (
             <p className="mt-5 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {submitError}
+              {error}
             </p>
           )}
 
-          {/* Submit */}
-          <div className="pt-5 flex gap-3">
+          <div className="mt-6">
             <Button
               type="submit"
               disabled={running}
-              className="flex-1 bg-[#849B6F] hover:bg-[#6e8360] text-white"
+              className="w-full bg-[#203E84] hover:bg-[#203E84]/90 text-white"
             >
-              {running ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {running ? 'Searching for reviewers…' : 'Find Reviewers'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-gray-200 text-gray-600 hover:bg-gray-50"
-              onClick={handleClear}
-            >
-              Clear
+              {running ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Searching for reviewers…
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Find Reviewers
+                </>
+              )}
             </Button>
           </div>
         </form>
@@ -344,15 +325,25 @@ export function QuickMatchPage() {
         {/* Results */}
         {(reviewers.length > 0 || lastRunAt) && !running && (
           <div className="mt-8 bg-white rounded-xl shadow-sm p-8">
-            <div className="mb-5">
-              <h2 className="text-xl font-semibold text-[#203E84]">
-                Reviewer Matches ({reviewers.length})
-              </h2>
-              {lastRunAt && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Last run {new Date(lastRunAt).toLocaleString()}
-                </p>
-              )}
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-semibold text-[#203E84]">
+                  Reviewer Matches ({reviewers.length})
+                </h2>
+                {lastRunAt && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Last run {new Date(lastRunAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-xs text-gray-500 hover:text-red-600 flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" />
+                Clear
+              </button>
             </div>
 
             {reviewers.length === 0 ? (
