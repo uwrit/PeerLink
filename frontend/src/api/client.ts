@@ -57,7 +57,7 @@ export const api = {
   updateReviewerStatus: (
     jobId: number,
     reviewerIndex: number,
-    body: { invitation_sent?: boolean; accepted_invite?: boolean },
+    body: { invitation_sent?: boolean; accepted_invite?: boolean; declined_invite?: boolean },
   ) =>
     request<MatchJob>(`/matching/jobs/${jobId}/reviewers/${reviewerIndex}`, {
       method: 'PATCH',
@@ -122,4 +122,5 @@ export interface ReviewerResult {
   parse_error?: string
   invitation_sent?: boolean
   accepted_invite?: boolean
+  declined_invite?: boolean
 }
