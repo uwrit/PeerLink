@@ -34,16 +34,16 @@ export const api = {
   updateAbstract: (id: number, body: Partial<Abstract>) =>
     request<Abstract>(`/abstracts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
-  createAbstract: (body: {
-    title: string
-    applicant_name: string
-    applicant_email: string
-    affiliation: string
-    phone: string
-    program: string
+  runEphemeralMatching: (body: {
     abstract_text: string
+    institutions: { name: string; count: number }[]
+    year_from: number
+    year_to?: number
   }) =>
-    request<Abstract>('/abstracts', { method: 'POST', body: JSON.stringify(body) }),
+    request<{ reviewers: ReviewerResult[] }>('/matching/run-ephemeral', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   startMatching: (body: MatchRequest) =>
     request<{ job_ids: number[]; status: string }>('/matching/start', {
