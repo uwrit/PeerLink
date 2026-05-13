@@ -7,18 +7,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }))
-    const detail = err.detail
-    // Pydantic 422 returns an array of {loc, msg, ...}; flatten to a readable string
-    if (Array.isArray(detail)) {
-      const msg = detail
-        .map((d: { loc?: (string | number)[]; msg?: string }) => {
-          const field = d.loc?.filter((p) => p !== 'body').join('.') ?? 'field'
-          return `${field}: ${d.msg ?? 'invalid'}`
-        })
-        .join('; ')
-      throw new Error(msg || res.statusText)
-    }
-    throw new Error(detail ?? res.statusText)
+    throw new Error(err.detail ?? res.statusText)
   }
   return res.json()
 }
@@ -33,17 +22,6 @@ export const api = {
 
   updateAbstract: (id: number, body: Partial<Abstract>) =>
     request<Abstract>(`/abstracts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-
-  createAbstract: (body: {
-    title: string
-    applicant_name: string
-    applicant_email: string
-    affiliation: string
-    phone: string
-    program: string
-    abstract_text: string
-  }) =>
-    request<Abstract>('/abstracts', { method: 'POST', body: JSON.stringify(body) }),
 
   startMatching: (body: MatchRequest) =>
     request<{ job_ids: number[]; status: string }>('/matching/start', {
