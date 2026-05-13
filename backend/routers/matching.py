@@ -26,13 +26,6 @@ class MatchRequest(BaseModel):
     year_to: int | None = Field(default=None, ge=1900)
 
 
-class EphemeralMatchRequest(BaseModel):
-    abstract_text: str = Field(min_length=1, max_length=50_000)
-    institutions: list[InstitutionRequest] = Field(min_length=1)
-    year_from: int = Field(default=2020, ge=1900)
-    year_to: int | None = Field(default=None, ge=1900)
-
-
 class ReviewerStatusPatch(BaseModel):
     invitation_sent: bool | None = None
     accepted_invite: bool | None = None
@@ -144,32 +137,6 @@ async def start_matching(
         )
 
     return {"job_ids": job_ids, "status": "pending"}
-
-
-@router.post("/run-ephemeral")
-async def run_ephemeral(body: EphemeralMatchRequest) -> dict[str, Any]:
-    """Run the agent on the fly and return reviewers. Nothing is persisted."""
-    if body.year_to is not None and body.year_to < body.year_from:
-        raise HTTPException(
-            status_code=400,
-            detail="'year_to' cannot be earlier than 'year_from'",
-        )
-
-    unknown = [inst.name for inst in body.institutions if inst.name not in INSTITUTIONS]
-    if unknown:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown institution(s): {', '.join(unknown)}",
-        )
-
-    institutions = [inst.model_dump() for inst in body.institutions]
-    reviewers = await matcher.run_ephemeral(
-        abstract_text=body.abstract_text,
-        institutions=institutions,
-        year_from=body.year_from,
-        year_to=body.year_to,
-    )
-    return {"reviewers": reviewers}
 
 
 @router.get("/jobs")
