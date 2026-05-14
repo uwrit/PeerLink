@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { AbstractsPage } from './pages/AbstractsPage'
 import { MatchHistoryPage } from './pages/MatchHistoryPage'
 import { AccountPage } from './pages/AccountPage'
+import { FindReviewersPage } from './pages/FindReviewersPage'
 
 export const router = createBrowserRouter([
   {
@@ -12,6 +13,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: DashboardPage },
       { path: 'abstracts', Component: AbstractsPage },
+      { path: 'find-reviewers', Component: FindReviewersPage },
       { path: 'match-history', Component: MatchHistoryPage },
       { path: 'account', Component: AccountPage },
     ],

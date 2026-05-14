@@ -103,3 +103,47 @@ async def run_matching_job(
     await asyncio.gather(*tasks)
 
     job_storage.update_job(job_id, {"status": "done"})
+
+
+async def _run_one_public(
+    abstract_text: str,
+    institution: str,
+    num_reviewers: int,
+    year_from: int,
+    year_to: int | None,
+) -> list[dict[str, Any]]:
+    async with _SEMAPHORE:
+        try:
+            output, _ = await find_reviewers(
+                abstract=abstract_text,
+                institution=institution,
+                num_reviewers=num_reviewers,
+                year_from=year_from,
+                year_to=year_to,
+                exclude_authors=[],
+            )
+            return _parse_reviewers_from_output(output, institution)
+        except Exception as exc:
+            logger.error("Public matching failed for %s: %s", institution, exc)
+            return [{"institution": institution, "parse_error": str(exc)}]
+
+
+async def run_public(
+    abstract_text: str,
+    institutions: list[dict[str, Any]],
+    year_from: int,
+    year_to: int | None,
+) -> list[dict[str, Any]]:
+    results = await asyncio.gather(
+        *[
+            _run_one_public(
+                abstract_text=abstract_text,
+                institution=inst["name"],
+                num_reviewers=inst["count"],
+                year_from=year_from,
+                year_to=year_to,
+            )
+            for inst in institutions
+        ]
+    )
+    return [r for sublist in results for r in sublist]

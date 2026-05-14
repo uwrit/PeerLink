@@ -44,6 +44,17 @@ export const api = {
 
   syncGravityForms: () =>
     request<{ synced: number }>('/sync/gravity-forms', { method: 'POST' }),
+
+  runPublicMatching: (body: {
+    abstract_text: string
+    institutions: { name: string; count: number }[]
+    year_from: number
+    year_to: number
+  }) =>
+    request<{ reviewers: ReviewerResult[] }>('/matching/run-public', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 }
 
 export interface Abstract {

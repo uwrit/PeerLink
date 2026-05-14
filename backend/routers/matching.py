@@ -26,6 +26,13 @@ class MatchRequest(BaseModel):
     year_to: int | None = Field(default=None, ge=1900)
 
 
+class PublicMatchRequest(BaseModel):
+    abstract_text: str = Field(min_length=1)
+    institutions: list[InstitutionRequest] = Field(min_length=1)
+    year_from: int = Field(default=2020, ge=1900)
+    year_to: int | None = Field(default=None, ge=1900)
+
+
 class ReviewerStatusPatch(BaseModel):
     invitation_sent: bool | None = None
     accepted_invite: bool | None = None
@@ -137,6 +144,37 @@ async def start_matching(
         )
 
     return {"job_ids": job_ids, "status": "pending"}
+
+
+@router.post("/run-public")
+async def run_public_matching(body: PublicMatchRequest) -> dict[str, Any]:
+    """Run the reviewer-finder agent on a pasted abstract. Nothing is persisted.
+
+    This endpoint backs the public demo page (/find-reviewers) for external
+    institutions. It does not touch the abstracts or match_jobs tables and
+    does not require any auth.
+    """
+    if body.year_to is not None and body.year_to < body.year_from:
+        raise HTTPException(
+            status_code=400,
+            detail="'year_to' cannot be earlier than 'year_from'",
+        )
+
+    unknown = [inst.name for inst in body.institutions if inst.name not in INSTITUTIONS]
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown institution(s): {', '.join(unknown)}",
+        )
+
+    institutions = [inst.model_dump() for inst in body.institutions]
+    reviewers = await matcher.run_public(
+        abstract_text=body.abstract_text,
+        institutions=institutions,
+        year_from=body.year_from,
+        year_to=body.year_to,
+    )
+    return {"reviewers": reviewers}
 
 
 @router.get("/jobs")
