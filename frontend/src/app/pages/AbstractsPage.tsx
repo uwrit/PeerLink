@@ -151,13 +151,6 @@ export function AbstractsPage() {
     }
   }
 
-  const currentProgramCount = abstracts.filter((a) => {
-    const matchesProgram = selectedProgram === 'All Programs' || a.program === selectedProgram
-    const matchesYear = selectedYear === 'All Years' ||
-      (a.submitted ? new Date(a.submitted).getFullYear().toString() === selectedYear : false)
-    return matchesProgram && matchesYear
-  }).length
-
   const abstractIsActive =
     selectedApp?.matchStatus === 'processing' || selectedApp?.matchStatus === 'in-progress'
   const showSubmittedUI = formSubmitted || abstractIsActive
@@ -348,26 +341,6 @@ export function AbstractsPage() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0 flex items-center justify-between">
-          <p className="text-xs text-gray-500">
-            {filtered.length} of {currentProgramCount} abstract{currentProgramCount !== 1 ? 's' : ''}
-          </p>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-              {filtered.filter((a) => a.matchStatus === 'unmatched').length} unmatched
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-              {filtered.filter((a) => a.matchStatus === 'in-progress').length} in progress
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#849B6F] inline-block" />
-              {filtered.filter((a) => a.matchStatus === 'matched').length} matched
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Right Detail Panel */}
