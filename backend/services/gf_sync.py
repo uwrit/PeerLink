@@ -12,22 +12,37 @@ from api.gravity_forms_client import GravityFormsClient, extract_pdf_text, parse
 logger = logging.getLogger(__name__)
 
 
-async def _fetch_abstract_text(client: GravityFormsClient, pdf_url: str, label: str = "") -> str:
+_MAX_CONCURRENT_PDF_DOWNLOADS = 6
+
+
+async def _fetch_abstract_text(
+    client: GravityFormsClient,
+    pdf_url: str,
+    label: str = "",
+    sem: asyncio.Semaphore | None = None,
+) -> str:
     if not pdf_url:
         return ""
-    print(f"  [PDF] Downloading: {label or pdf_url}")
-    try:
-        pdf_bytes = await client.download_pdf(pdf_url)
-        print(f"  [PDF] Extracting abstract: {label or pdf_url}")
-        result = await asyncio.to_thread(
-            extract_pdf_text, pdf_bytes, True, max_pages=3
-        )
-        print(f"  [PDF] Done: {label or pdf_url} ({len(result)} chars)")
-        return result
-    except Exception as exc:
-        print(f"  [PDF] FAILED: {label or pdf_url} — {exc}")
-        logger.warning("PDF extraction failed for %s: %s", pdf_url, exc)
-        return ""
+
+    async def _run() -> str:
+        print(f"  [PDF] Downloading: {label or pdf_url}")
+        try:
+            pdf_bytes = await client.download_pdf(pdf_url)
+            print(f"  [PDF] Extracting abstract: {label or pdf_url}")
+            result = await asyncio.to_thread(
+                extract_pdf_text, pdf_bytes, True, max_pages=5
+            )
+            print(f"  [PDF] Done: {label or pdf_url} ({len(result)} chars)")
+            return result
+        except Exception as exc:
+            print(f"  [PDF] FAILED: {label or pdf_url} — {exc}")
+            logger.warning("PDF extraction failed for %s: %s", pdf_url, exc)
+            return ""
+
+    if sem is None:
+        return await _run()
+    async with sem:
+        return await _run()
 
 
 async def sync_gravity_forms(storage: Storage) -> dict[str, int]:
@@ -49,10 +64,19 @@ async def sync_gravity_forms(storage: Storage) -> dict[str, int]:
 
     parsed_entries = [parse_entry(raw) for raw in raw_entries if raw.get("id")]
 
-    print(f"[Sync] Processing {len(parsed_entries)} applications concurrently...")
+    print(
+        f"[Sync] Processing {len(parsed_entries)} applications "
+        f"(max {_MAX_CONCURRENT_PDF_DOWNLOADS} concurrent downloads)..."
+    )
+    sem = asyncio.Semaphore(_MAX_CONCURRENT_PDF_DOWNLOADS)
     abstract_texts = await asyncio.gather(
         *[
-            _fetch_abstract_text(client, p["pdf_url"], label=p["title"] or p["gf_entry_id"])
+            _fetch_abstract_text(
+                client,
+                p["pdf_url"],
+                label=p["title"] or p["gf_entry_id"],
+                sem=sem,
+            )
             for p in parsed_entries
         ]
     )

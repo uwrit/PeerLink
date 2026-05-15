@@ -24,7 +24,8 @@ class GravityFormsClient:
     async def get_all_entries(
         self,
         form_id: int = FORM_ID,
-        page_size: int = 10,
+        # Number of applications to fetch
+        page_size: int = 50,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
         url = (
@@ -109,8 +110,12 @@ def extract_pdf_text(
 
 def _clean_abstract(text: str) -> str:
     import re
-    # Drop form-template instruction lines (e.g. "Please insert your abstract here...")
-    text = re.sub(r'(?im)^please\b[^\n]*\n?', '', text)
+    text = re.sub(
+        r'(?is)please\s+insert\s+your\s+(?:project\s+)?abstract\s+here\s*\([^)]*\)\s*',
+        '',
+        text,
+    )
+    text = re.sub(r'(?i)\(\s*\d+[-\s]word\s+maximum\s*\)\s*', '', text)
     # Drop page headers that leaked in: short lines followed by a known app title line
     text = re.sub(r'(?m)^.{1,60}\n(?:ITHS|University of Washington)[^\n]*\n?', '', text)
     # Fix pypdf split-capital artifacts: lone uppercase letter on its own line (e.g. "A\nccurate")
