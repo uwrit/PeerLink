@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { FileText, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { FileText, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Badge } from '../components/ui/badge'
 import { usePeerLink, PROGRAMS } from '../context/PeerLinkContext'
 
 export function DashboardPage() {
-  const { abstracts, syncGravityForms } = usePeerLink()
+  const { abstracts } = usePeerLink()
   const [selectedProgram, setSelectedProgram] = useState<string>('')
-  const [syncing, setSyncing] = useState(false)
-  const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
   const activeProgram = selectedProgram || PROGRAMS[0] || ''
 
@@ -31,41 +29,15 @@ export function DashboardPage() {
 
   const stats = getProgramStats(activeProgram)
 
-  const handleSync = async () => {
-    setSyncing(true)
-    setSyncMsg(null)
-    try {
-      const { synced } = await syncGravityForms()
-      setSyncMsg(`Synced ${synced} abstract${synced !== 1 ? 's' : ''} from Gravity Forms`)
-    } catch (e) {
-      setSyncMsg('Sync failed — check backend logs')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 p-6 overflow-auto bg-[#E8F0DD]/30">
         <div className="max-w-7xl mx-auto">
 
           {/* Header */}
-          <div className="mb-8 flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-[#203E84] mb-2">Dashboard</h1>
-              <p className="text-gray-700">Overview of all abstract matching activity across programs</p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-[#203E84] text-[#203E84] hover:bg-[#203E84] hover:text-white transition-colors text-sm font-medium disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing…' : 'Sync from Gravity Forms'}
-              </button>
-              {syncMsg && <p className="text-xs text-gray-500">{syncMsg}</p>}
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold text-[#203E84] mb-2">Dashboard</h1>
+            <p className="text-gray-700">Overview of all abstract matching activity across programs</p>
           </div>
 
           {/* Overall Stats */}

@@ -272,7 +272,7 @@ export function AbstractsPage() {
                     </svg>
                   )}
                 </button>
-                <span className="text-xs text-gray-400">Select all visible</span>
+                <span className="text-xs text-gray-400">Select all</span>
               </div>
 
               {filtered.map((app) => {
