@@ -159,7 +159,7 @@ export function AbstractsPage() {
     <div className="flex h-full overflow-hidden">
       {/* Left List Panel */}
       <div
-        className="flex flex-col border-r border-gray-200 bg-white flex-shrink-0 transition-all duration-300"
+        className="flex flex-col border-r border-gray-200 bg-white flex-shrink-0"
         style={{ width: selectedApp ? '360px' : '100%', minWidth: '300px' }}
       >
         {/* Panel Header */}
@@ -272,7 +272,7 @@ export function AbstractsPage() {
                     </svg>
                   )}
                 </button>
-                <span className="text-xs text-gray-400">Select all visible</span>
+                <span className="text-xs text-gray-400">Select all</span>
               </div>
 
               {filtered.map((app) => {
@@ -438,7 +438,7 @@ export function AbstractsPage() {
             </div>
 
             {/* Find Reviewers */}
-            <div className="bg-white rounded-xl border-2 border-[#849B6F]/40 p-6">
+            <div className="pt-2">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-6 h-6 rounded-full bg-[#203E84] flex items-center justify-center">
                   <Search className="w-3 h-3 text-white" />
@@ -539,7 +539,7 @@ export function AbstractsPage() {
                     {selectedInstitutions.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {selectedInstitutions.map((uni) => (
-                          <div key={uni} className="flex items-center gap-3 bg-[#E8F0DD]/50 border border-[#849B6F]/20 rounded-lg px-3 py-2">
+                          <div key={uni} className="flex items-center gap-3 px-3 py-2">
                             <span className="text-sm text-gray-800 flex-1 leading-snug">{uni}</span>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <span className="text-xs text-gray-500 whitespace-nowrap">Reviewers:</span>

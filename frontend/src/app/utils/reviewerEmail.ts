@@ -1,24 +1,45 @@
-// Maps an abstract's award program to a reviewer-invitation email template
-// (subject + body) and produces a mailto: URL. Templates are derived from the
-// ITHS mail-merge letters provided by the program team.
+// (subject + body) and produces a mailto: URL. Default templates are derived
+// from the ITHS mail-merge letters provided by the program team. Users can
+// override any program's template from the Settings page; overrides are stored
+// in localStorage and resolved at render time.
 
 export type ProgramKey =
   | 'Early-Stage Product Development Award'
   | 'New Interdisciplinary Academic Collaborations'
   | 'Academic Community Partnerships'
 
-interface TemplateInputs {
+export const PROGRAM_KEYS: ProgramKey[] = [
+  'Early-Stage Product Development Award',
+  'New Interdisciplinary Academic Collaborations',
+  'Academic Community Partnerships',
+]
+
+export interface TemplateInputs {
   reviewerName: string
   applicantName: string
   projectTitle: string
 }
 
-interface RenderedEmail {
+export interface RenderedEmail {
   subject: string
   body: string
 }
 
-const SUBJECT = 'Please help ITHS select grant awardees'
+export interface EmailTemplate {
+  subject: string
+  body: string
+}
+
+// Placeholders supported in template bodies and subjects.
+export const TEMPLATE_PLACEHOLDERS: Array<{ token: string; description: string }> = [
+  { token: '{REVIEWER_LAST}', description: "Reviewer's last name" },
+  { token: '{REVIEWER_NAME}', description: "Reviewer's full name" },
+  { token: '{APPLICANT_LAST}', description: "Applicant's last name" },
+  { token: '{APPLICANT_NAME}', description: "Applicant's full name" },
+  { token: '{PROJECT_TITLE}', description: 'Title of the applicant project' },
+]
+
+const DEFAULT_SUBJECT = 'Please help ITHS select grant awardees'
 
 const SIGNATURE = `Sincerely,
 The ITHS Pilot Awards Team
@@ -59,30 +80,6 @@ Thank you for your consideration. Your efforts will help us fulfill our mission 
 
 const REVIEW_PARAGRAPH = `The burden of review is low. The research section is limited to two pages. The review process is simple, confidential, and will be completed via a REDCap survey. Reviewers remain anonymous, and your responses are invaluable feedback for our applicants. Reviews would be due by November 10, 2025.`
 
-function lastName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean)
-  return parts.length > 0 ? parts[parts.length - 1] : fullName.trim()
-}
-
-function buildBody(intro: string, inputs: TemplateInputs): string {
-  const reviewerLast = lastName(inputs.reviewerName)
-  const applicantLast = lastName(inputs.applicantName)
-  const tail = COMMON_TAIL.split('{APPLICANT_LAST}').join(applicantLast)
-  return [
-    `Dear Dr. ${reviewerLast},`,
-    '',
-    intro,
-    '',
-    `As an expert in your field, we request your help in reviewing Dr. ${applicantLast}'s project, ${inputs.projectTitle}.`,
-    '',
-    REVIEW_PARAGRAPH,
-    '',
-    tail,
-    '',
-    SIGNATURE,
-  ].join('\n')
-}
-
 const INTROS: Record<ProgramKey, string> = {
   'Early-Stage Product Development Award':
     'Even in these days of funding challenges, the Institute of Translational Health Sciences (ITHS) offers Pilot awards up to $100,000 to accelerate translation and improve health through its Early-Stage Product Development Award. This award is designed to support the development of new products based on scientific discovery and drive those products to clinical impact.',
@@ -92,13 +89,104 @@ const INTROS: Record<ProgramKey, string> = {
     'Even in these days of funding challenges, the Institute of Translational Health Sciences (ITHS) offers Pilot awards up to $50,000 to accelerate research and improve health through its Academic Community Partnerships Award. This unique award is designed to jump start collaborations between academic researchers and community organizations in new projects that investigate a community-based health problem, disseminate evidence-based health innovations into practice, target health promotion or prevention, or examine ways to enhance or implement sustainable health programs in community settings.',
 }
 
+function lastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  return parts.length > 0 ? parts[parts.length - 1] : fullName.trim()
+}
+
+function buildDefaultBody(program: ProgramKey): string {
+  return [
+    'Dear Dr. {REVIEWER_LAST},',
+    '',
+    INTROS[program],
+    '',
+    "As an expert in your field, we request your help in reviewing Dr. {APPLICANT_LAST}'s project, {PROJECT_TITLE}.",
+    '',
+    REVIEW_PARAGRAPH,
+    '',
+    COMMON_TAIL,
+    '',
+    SIGNATURE,
+  ].join('\n')
+}
+
+export function getDefaultTemplate(program: ProgramKey): EmailTemplate {
+  return {
+    subject: DEFAULT_SUBJECT,
+    body: buildDefaultBody(program),
+  }
+}
+
+const STORAGE_KEY = 'peerlink:reviewerEmailTemplates'
+
+type StoredTemplates = Partial<Record<ProgramKey, EmailTemplate>>
+
+function readStored(): StoredTemplates {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeStored(value: StoredTemplates): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+  } catch {
+    // ignore quota / serialization errors
+  }
+}
+
+export function loadTemplate(program: ProgramKey): EmailTemplate {
+  const stored = readStored()[program]
+  if (stored && typeof stored.subject === 'string' && typeof stored.body === 'string') {
+    return stored
+  }
+  return getDefaultTemplate(program)
+}
+
+export function saveTemplate(program: ProgramKey, template: EmailTemplate): void {
+  const stored = readStored()
+  stored[program] = template
+  writeStored(stored)
+}
+
+export function resetTemplate(program: ProgramKey): void {
+  const stored = readStored()
+  delete stored[program]
+  writeStored(stored)
+}
+
+export function hasCustomTemplate(program: ProgramKey): boolean {
+  return readStored()[program] !== undefined
+}
+
+function applyPlaceholders(text: string, inputs: TemplateInputs): string {
+  const reviewerLast = lastName(inputs.reviewerName)
+  const applicantLast = lastName(inputs.applicantName)
+  return text
+    .split('{REVIEWER_LAST}').join(reviewerLast)
+    .split('{REVIEWER_NAME}').join(inputs.reviewerName)
+    .split('{APPLICANT_LAST}').join(applicantLast)
+    .split('{APPLICANT_NAME}').join(inputs.applicantName)
+    .split('{PROJECT_TITLE}').join(inputs.projectTitle)
+}
+
 export function renderReviewerEmail(
   program: string,
   inputs: TemplateInputs,
 ): RenderedEmail | null {
-  const intro = INTROS[program as ProgramKey]
-  if (!intro) return null
-  return { subject: SUBJECT, body: buildBody(intro, inputs) }
+  if (!PROGRAM_KEYS.includes(program as ProgramKey)) return null
+  const tpl = loadTemplate(program as ProgramKey)
+  return {
+    subject: applyPlaceholders(tpl.subject, inputs),
+    body: applyPlaceholders(tpl.body, inputs),
+  }
 }
 
 export function buildReviewerMailto(
