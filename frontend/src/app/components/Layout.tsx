@@ -11,7 +11,7 @@ export function Layout() {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`bg-[#E8F0DD] border-r border-[rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col ${
+        className={`bg-[#E8F0DD] border-r border-[rgba(0,0,0,0.1)] flex flex-col ${
           isOpen ? 'w-64' : 'w-16'
         }`}
       >
