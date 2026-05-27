@@ -52,8 +52,10 @@ services:
     depends_on:
       - backend
     networks:
-      - peerlink
-      - web-containers
+      peerlink:
+      web-containers:
+        aliases:
+          - peerlinkfrontend
 
 networks:
   peerlink:
