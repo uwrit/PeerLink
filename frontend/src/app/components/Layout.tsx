@@ -53,19 +53,9 @@ export function Layout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-[rgba(0,0,0,0.1)] px-6 py-4 flex items-center justify-between">
+        <header className="bg-white border-b border-[rgba(0,0,0,0.1)] px-6 py-4 flex items-center">
           <div className="flex items-center gap-4">
             <img src={ithsLogo} alt="Institute of Translational Health Sciences" className="h-8 w-auto" />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-medium text-[#203E84]">Program Coordinator</div>
-              <div className="text-xs text-gray-600">ITHS</div>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-[#849B6F] flex items-center justify-center text-white font-medium text-sm">
-              PC
-            </div>
           </div>
         </header>
 
