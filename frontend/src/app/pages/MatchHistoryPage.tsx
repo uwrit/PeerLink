@@ -326,7 +326,7 @@ export function MatchHistoryPage() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
               </span>
               <h2 className="text-[#203E84] font-bold text-lg" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>
-                Live Activity
+                Activity
               </h2>
               <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
                 {filteredLiveEntries.length} active

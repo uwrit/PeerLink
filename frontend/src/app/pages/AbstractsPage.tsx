@@ -438,7 +438,7 @@ export function AbstractsPage() {
             </div>
 
             {/* Find Reviewers */}
-            <div className="pt-2">
+            <div className="bg-white rounded-xl border-2 border-[#849B6F]/40 p-6">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-6 h-6 rounded-full bg-[#203E84] flex items-center justify-center">
                   <Search className="w-3 h-3 text-white" />
