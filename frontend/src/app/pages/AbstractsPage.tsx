@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router'
 import {
   Search, ChevronRight, Building2, User, Mail, BookOpen,
   Plus, Minus, X, FileText, ChevronDown, CheckCircle,
@@ -464,9 +465,13 @@ export function AbstractsPage() {
                       <div className="w-12 h-12 bg-blue-100 rounded-full mx-auto flex items-center justify-center mb-3">
                         <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
                       </div>
-                      <p className="font-semibold text-blue-700 mb-1">AI Processing Underway</p>
+                      <p className="font-semibold text-blue-700 mb-1">Finding Reviewers</p>
                       <p className="text-sm text-blue-600">
-                        The AI is searching for the best reviewer matches. Track progress in Match History.
+                        Finding reviewer matches. Track progress in{' '}
+                        <Link to="/match-history" className="font-medium underline hover:text-blue-800">
+                          Match History
+                        </Link>
+                        .
                       </p>
                     </div>
                   )}
