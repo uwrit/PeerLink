@@ -4,7 +4,7 @@ import uwMedicineLogo from "../../assets/uw_medicine_logo.png";
 export function Footer() {
   return (
     <footer className="bg-[#262626] text-white px-8 py-10">
-      <div className="mx-auto flex flex-col md:flex-row gap-8 md:gap-12 items-center">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12 items-center">
         <div className="flex flex-col gap-6 flex-shrink-0 items-center">
           <img
             src={ithsLogo}
