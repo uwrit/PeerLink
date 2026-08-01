@@ -1,0 +1,16 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+
+class Storage(Protocol):
+    def get_all(self) -> list[dict[str, Any]]: ...
+    def get_by_id(self, abstract_id: int) -> dict[str, Any] | None: ...
+    def get_by_gf_entry_id(self, gf_entry_id: str) -> dict[str, Any] | None: ...
+    def upsert(self, record: dict[str, Any]) -> dict[str, Any]: ...
+    def update(self, abstract_id: int, fields: dict[str, Any]) -> dict[str, Any] | None: ...
+
+
+def get_storage() -> Storage:
+    from backend.services.mariadb_storage import MariaDbStorage
+    return MariaDbStorage()
