@@ -4,14 +4,19 @@
 ```mermaid
 flowchart TD;
 
-AA[Anthropic API]
-ZZ[Public Access] --> |peerlink.iths.org HTTPS UWNetID Protected| B
+AN[Anthropic API]
+GF[Gravity Forms API]
+OA[OpenAlex API]
+ZZ[Public Access] --> |peerlink.iths.org HTTPS UWNetID Protected| F
+
 subgraph rit-pub-con1;
-A[FAST API Container]
-B[Web Container]
-B <--> |:9090| A
+F[Frontend Container] --> |:8000| B[Backend Container]
+B <--> |:3306| D[(MariaDB Container)]
 end
-A <--> AA
+
+B <--> AN
+B <--> GF
+B <--> OA
 ```
 
 
