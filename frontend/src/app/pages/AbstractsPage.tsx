@@ -166,10 +166,7 @@ export function AbstractsPage() {
         {/* Panel Header */}
         <div className="px-5 pt-5 pb-4 border-b border-gray-200 flex-shrink-0 bg-white">
           <div className="flex items-center justify-between mb-3">
-            <h1
-              className="text-[#203E84]"
-              style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '1.5rem', fontWeight: 700 }}
-            >
+            <h1 className="text-3xl font-semibold text-[#203E84]">
               Abstracts
             </h1>
             {batchSelected.size > 0 && (

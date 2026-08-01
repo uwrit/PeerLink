@@ -173,10 +173,7 @@ export function FindReviewersPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1
-          className="text-[#203E84]"
-          style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '1.75rem', fontWeight: 700 }}
-        >
+        <h1 className="text-3xl font-semibold text-[#203E84]">
           Find Reviewers
         </h1>
         <p className="text-sm text-gray-500 mt-1">
