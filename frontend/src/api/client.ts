@@ -51,8 +51,6 @@ export const api = {
   syncGravityForms: () =>
     request<{ synced: number }>("/sync/gravity-forms", { method: "POST" }),
 
-  getMe: () => request<CurrentUser>('/me'),
-
   runPublicMatching: (body: {
     abstract_text: string;
     institutions: { name: string; count: number }[];
@@ -64,14 +62,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 };
-
-export interface CurrentUser {
-  user_id: string | null
-  email: string | null
-  first_name: string | null
-  last_name: string | null
-  full_name: string | null
-}
 
 export interface Abstract {
   id: number;

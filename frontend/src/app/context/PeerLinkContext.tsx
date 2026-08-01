@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
-import { api, Abstract as APIAbstract, MatchJob, CurrentUser } from '../../api/client'
+import { api, Abstract as APIAbstract, MatchJob } from '../../api/client'
 
 export const PROGRAMS = [
   'Interdisciplinary Solution Development Award',
@@ -44,7 +44,6 @@ export interface LiveMatchEntry {
 interface PeerLinkContextType {
   abstracts: Abstract[]
   liveMatchEntries: LiveMatchEntry[]
-  currentUser: CurrentUser | null
   loading: boolean
   reload: () => Promise<void>
   submitForReview: (abstractId: number, payload: MatchPayload) => Promise<number>
@@ -96,7 +95,6 @@ function jobToLiveEntry(job: MatchJob, absList: Abstract[]): LiveMatchEntry | nu
 export function PeerLinkProvider({ children }: { children: ReactNode }) {
   const [abstracts, setAbstracts] = useState<Abstract[]>([])
   const [liveMatchEntries, setLiveMatchEntries] = useState<LiveMatchEntry[]>([])
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   const syncLiveEntries = useCallback(async (absList: Abstract[]) => {
@@ -134,10 +132,6 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
   }, [syncLiveEntries])
 
   useEffect(() => { reload() }, [reload])
-
-  useEffect(() => {
-    api.getMe().then(setCurrentUser).catch(() => setCurrentUser(null))
-  }, [])
 
   useEffect(() => {
     if (liveMatchEntries.length === 0) return
@@ -205,7 +199,7 @@ export function PeerLinkProvider({ children }: { children: ReactNode }) {
 
   return (
     <PeerLinkContext.Provider value={{
-      abstracts, liveMatchEntries, currentUser,
+      abstracts, liveMatchEntries,
       loading, reload, submitForReview, submitBatch, updateAbstract,
       syncGravityForms,
     }}>

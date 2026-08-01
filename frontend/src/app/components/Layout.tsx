@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router'
-import { Menu, LayoutDashboard, History, ChevronLeft, FileText, Search, Settings, UserCircle } from 'lucide-react'
+import { Menu, LayoutDashboard, History, ChevronLeft, FileText, Search, Settings } from 'lucide-react'
 import ithsLogo from '../../assets/iths_logo.png'
 import { Footer } from './Footer'
-import { usePeerLink } from '../context/PeerLinkContext'
 
 export function Layout() {
   const [isOpen, setIsOpen] = useState(true)
   const location = useLocation()
-  const { currentUser } = usePeerLink()
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
@@ -62,23 +60,10 @@ export function Layout() {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white border-b border-[rgba(0,0,0,0.1)] h-[69px] px-6 flex items-center justify-between">
+          <header className="bg-white border-b border-[rgba(0,0,0,0.1)] h-[69px] px-6 flex items-center">
             <div className="flex items-center gap-4">
               <img src={ithsLogo} alt="Institute of Translational Health Sciences" className="h-10 w-auto" />
             </div>
-            {currentUser && (currentUser.full_name || currentUser.email) && (
-              <div className="flex items-center gap-2.5">
-                <div className="hidden sm:block text-right leading-tight">
-                  {currentUser.full_name && (
-                    <div className="text-sm font-medium text-[#203E84]">{currentUser.full_name}</div>
-                  )}
-                  {currentUser.email && (
-                    <div className="text-xs text-gray-500">{currentUser.email}</div>
-                  )}
-                </div>
-                <UserCircle className="h-8 w-8 text-[#849B6F]" />
-              </div>
-            )}
           </header>
 
           <main className="flex-1 bg-white">
