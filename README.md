@@ -1,15 +1,9 @@
 # PeerLink
 ## An Agentic Tool to Find Grant Reviewers
 
-```mermaid
-flowchart TD;
+This branch is for local development ONLY.
+Use Docker Desktop to run the app and use the docker compose file to start the containers. 
 
-AA[Anthropic API]
-ZZ[Public Access] --> |peerlink.iths.org HTTPS UWNetID Protected| B
-subgraph rit-pub-con1;
-A[FAST API Container]
-B[Web Container]
-B <--> |:9090| A
-end
-A <--> AA
-```
+This branch doesn't have logins/auth implemented. 
+
+Use git cherry pick to push changes made here to main. 
