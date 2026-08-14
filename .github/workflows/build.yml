@@ -25,7 +25,6 @@ jobs:
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DOCKER_HOST: "unix:///run/user/1000/docker.sock"
       GRAVITY_FORMS_API_CONSUMER_KEY: ${{ secrets.GRAVITY_FORMS_API_CONSUMER_KEY }}
       GRAVITY_FORMS_API_CONSUMER_SECRET: ${{ secrets.GRAVITY_FORMS_API_CONSUMER_SECRET }}
       MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
