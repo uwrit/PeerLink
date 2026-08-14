@@ -26,7 +26,7 @@ class GravityFormsClient:
         self,
         form_id: int = FORM_ID,
         # Number of applications to fetch
-        page_size: int = 2,
+        page_size: int = 5,
         field_ids: str = ENTRY_FIELDS,
     ) -> list[dict[str, Any]]:
         url = (
